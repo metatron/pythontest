@@ -3,25 +3,34 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 def addRsi(intervalDays, pridces):
-  upPriceList = {}
-  downPriceList = {}
+  upPriceList = []
+  downPriceList = []
   for i in range(1, len(pridces)):
-    if(len(upPriceList) + len(downPriceList) >= intervalDays):
-      upAverage = sum(upPriceList)/intervalDays
-      downAverage = sum(downPriceList)/intervalDays
-      rsi = upAverage/(upAverage + downAverage)
-      pridces.append(rsi)
-      #RSIを追加した後、次に備えて[0]要素を削除
-      del upPriceList[0]
-      del downPriceList[0]
+    if(pridces[i-1] < pridces[i]):
+      upPriceList.append(pridces[i])
+      downPriceList.append(pridces[i-1])
+    elif(pridces[i-1] > pridces[i]):
+      downPriceList.append(pridces[i])
+      upPriceList.append(pridces[i - 1])
     else:
-      #上がった
-      if(pridces[i-1]['CLOSE'] < pridces[i]['CLOSE']):
-        upPriceList.append(pridces[i]['CLOSE'])
-      elif(pridces[i-1]['CLOSE'] > pridces[i]['CLOSE']):
-        downPriceList.append(pridces[i]['CLOSE'])
-      else:
-        pridces.append(0)
+      downPriceList.append(0)
+      upPriceList.append(0)
+#     if(len(upPriceList) + len(downPriceList) >= intervalDays):
+#       upAverage = sum(upPriceList)/intervalDays
+#       downAverage = sum(downPriceList)/intervalDays
+#       rsi = upAverage/(upAverage + downAverage)
+#       pridces.append(rsi)
+#       #RSIを追加した後、次に備えて[0]要素を削除
+#       del upPriceList[0]
+#       del downPriceList[0]
+#     else:
+#       #上がった
+#       if(pridces[keys[i-1]]['CLOSE'] < pridces[keys[i]]['CLOSE']):
+#         upPriceList.append(pridces[i]['CLOSE'])
+#       elif(pridces[keys[i-1]]['CLOSE'] > pridces[keys[i]]['CLOSE']):
+#         downPriceList.append(pridces[i]['CLOSE'])
+#       else:
+#         pridces.append(0)
 
 
 url = "https://www.google.com/finance/getprices"

@@ -1,37 +1,7 @@
 import requests
 from datetime import datetime, timedelta
 import pandas as pd
-
-def addRsi(intervalDays, pridces):
-  upPriceList = []
-  downPriceList = []
-  for i in range(1, len(pridces)):
-    if(pridces[i-1] < pridces[i]):
-      upPriceList.append(pridces[i])
-      downPriceList.append(pridces[i-1])
-    elif(pridces[i-1] > pridces[i]):
-      downPriceList.append(pridces[i])
-      upPriceList.append(pridces[i - 1])
-    else:
-      downPriceList.append(0)
-      upPriceList.append(0)
-#     if(len(upPriceList) + len(downPriceList) >= intervalDays):
-#       upAverage = sum(upPriceList)/intervalDays
-#       downAverage = sum(downPriceList)/intervalDays
-#       rsi = upAverage/(upAverage + downAverage)
-#       pridces.append(rsi)
-#       #RSIを追加した後、次に備えて[0]要素を削除
-#       del upPriceList[0]
-#       del downPriceList[0]
-#     else:
-#       #上がった
-#       if(pridces[keys[i-1]]['CLOSE'] < pridces[keys[i]]['CLOSE']):
-#         upPriceList.append(pridces[i]['CLOSE'])
-#       elif(pridces[keys[i-1]]['CLOSE'] > pridces[keys[i]]['CLOSE']):
-#         downPriceList.append(pridces[i]['CLOSE'])
-#       else:
-#         pridces.append(0)
-
+import stockstats as stss
 
 url = "https://www.google.com/finance/getprices"
 code = 7203
@@ -54,11 +24,6 @@ lines = r.text.splitlines()
 columns = lines[4].split("=")[1].split(",")
 pridces = lines[8:]
 
-# RSI追加
-columns.append('RSI')
-addRsi(5, pridces)
-
-
 #レスポンスの１日目のタイムスタンプをdatetimeに
 first_cols = pridces[0].split(",")
 first_date = datetime.fromtimestamp(int(first_cols[0].lstrip('a')))
@@ -72,4 +37,6 @@ for price in pridces[1:]:
 df = pd.DataFrame(result, columns = columns)
 df.to_csv(str(code) + ".csv", index=False)
 
-
+#保存されたCSVを読み込んでstockstatsフォーマットにする
+stock = stss.StockDataFrame().retype(pd.read_csv(str(code) + ".csv"))
+print(stock['close'])

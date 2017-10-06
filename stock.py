@@ -12,7 +12,7 @@ tVals = np.array(stock.as_matrix(columns=['close']))
 
 rowLen = len(stock.as_matrix(columns=['close']))
 #stock info
-D_in, H, D_out = 4, rowLen, rowLen
+D_in, H, D_out = 4, 1000, 1
 x = torch.from_numpy(inVals)
 y = torch.from_numpy(tVals)
 
@@ -31,6 +31,10 @@ y.requires_grad = False
 model = torch.nn.Sequential(
     torch.nn.Linear(D_in, H),
     torch.nn.ReLU(),
+    torch.nn.Linear(H, H),
+    torch.nn.ReLU(),
+    torch.nn.Linear(H, H),
+    torch.nn.ReLU(),
     torch.nn.Linear(H, D_out),
 )
 
@@ -40,7 +44,7 @@ loss_fn = torch.nn.MSELoss(size_average=False)
 learning_rate = 1e-4
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-for t in range(10000):
+for t in range(100000):
     y_pred = model(x)
 
     loss = loss_fn(y_pred, y)

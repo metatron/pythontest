@@ -20,26 +20,6 @@ output_size = 1
 
 rnn = torch.nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers) #(10, 20, 2)
 
-class LstmModel(torch.nn.Module):
-    def __init__(self):
-        super(LstmModel, self).__init__()
-        self.lstm1 = torch.nn.LSTMCell(input_size, hidden_size)
-        self.lstm1 = torch.nn.LSTMCell(hidden_size, output_size)
-
-    def forward(self, input):
-        outputs = []
-        h_t = Variable(torch.zeros(input.size(0), hidden_size).double(), requires_grad=False)
-        c_t = Variable(torch.zeros(input.size(0), hidden_size).double(), requires_grad=False)
-        h_t2 = Variable(torch.zeros(input.size(0), output_size).double(), requires_grad=False)
-        c_t2 = Variable(torch.zeros(input.size(0), output_size).double(), requires_grad=False)
-
-        for i, input_t in enumerate(input.chunk(input.size(1), dim=1)):
-            h_t, c_t = self.lstm1(input_t, (h_t, c_t))
-            h_t2, c_t2 = self.lstm2(h_t, (h_t2, c_t2))
-            outputs += [h_t2]
-        outputs = torch.stack(outputs, 1).squeeze(2)
-        return outputs
-
 
 #(seq_len, batch, input_size)
 input = Variable(torch.randn(seq_len, batch, input_size))

@@ -107,9 +107,12 @@ for i in range(200):
 
     canProceed = False
 
+rndIndxList = torch.rand(10)*40
+rndIndxList = rndIndxList.int()
 
-testX = Variable(torch.from_numpy(x[400]))
-textT = t[400]
-y_pred = model(testX)
+for indx in rndIndxList:
+    testX = Variable(torch.from_numpy(x[indx]))
+    textT = t[indx]
+    y_pred = model(testX)
 
-print(textT, y_pred.view(1,10))
+    print(textT, y_pred.view(1,10))

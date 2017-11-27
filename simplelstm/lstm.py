@@ -24,6 +24,7 @@ inputData = np.array(stock.as_matrix(columns=['high','low','open','volume','macd
 targetData = np.array(stock.as_matrix(columns=['close']))
 #print(target)
 
+
 class Sequence(torch.nn.Module):
     def __init__(self):
         super(Sequence, self).__init__()
@@ -80,7 +81,7 @@ for y in range(245):
         optimizer.zero_grad()
         out = seq(input)
         loss = criterion(out, target)
-        print('out:{0}, loss:{1}'.format(out, loss.data.numpy()[0]))
+        print('out:{0}, target:{1}, loss:{2}'.format(out, target, loss.data.numpy()[0]))
         loss.backward()
         return loss
 

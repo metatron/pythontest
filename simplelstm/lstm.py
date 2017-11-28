@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 
 #stock info
-D_in, H, D_out = 5, 100, 1
+D_in, H, D_out = 5, 50, 1
 # x = torch.from_numpy(inVals)
 # y = torch.from_numpy(tVals)
 num_directions=1
@@ -36,32 +36,16 @@ targetData = np.array(stock.as_matrix(columns=['close']))
 class Sequence(torch.nn.Module):
     def __init__(self):
         super(Sequence, self).__init__()
-        self.lstm1 = torch.nn.LSTMCell(D_in, H)
-        self.lstm2 = torch.nn.LSTMCell(H, H)
-        self.linear = torch.nn.Linear(H, D_out)
+        self.linear1 = torch.nn.Linear(D_in, H)
+        self.lstm1 = torch.nn.LSTMCell(H, H)
+        self.linear2 = torch.nn.Linear(H, D_out)
 
-    def forward(self, input, future = 0):
-        outputs = []
-        h_t = Variable(torch.zeros(input.size(0), H).float(), requires_grad=False)
-        c_t = Variable(torch.zeros(input.size(0), H).float(), requires_grad=False)
-        h_t2 = Variable(torch.zeros(input.size(0), H).float(), requires_grad=False)
-        c_t2 = Variable(torch.zeros(input.size(0), H).float(), requires_grad=False)
+    def forward(self, input, hidden):
+        y = self.linear1(input)
+        h_t,c_t = self.lstm1(y, hidden)
+        output = self.linear2(h_t)
 
-        for input_t in input:
-            h_t, c_t = self.lstm1(input_t, (h_t, c_t))
-            h_t2, c_t2 = self.lstm2(h_t, (h_t2, c_t2))
-            output = self.linear(h_t2)
-            outputs += [output]
-
-        for i in range(future):# if we should predict the future
-            h_t, c_t = self.lstm1(output, (h_t, c_t))
-            h_t2, c_t2 = self.lstm2(h_t, (h_t2, c_t2))
-            output = self.linear(h_t2)
-            outputs += [output]
-
-        outputs = torch.stack(outputs, 1).squeeze(2)
-        return outputs
-
+        return output, h_t,c_t
 
 
 # set random seed to 0
@@ -80,23 +64,32 @@ else:
     seq.float()
     criterion = torch.nn.MSELoss()
     # use LBFGS as optimizer since we can load the whole data to train
-    optimizer = torch.optim.LBFGS(seq.parameters(), lr=0.8)
+    #optimizer = torch.optim.LBFGS(seq.parameters(), lr=0.8)
+    optimizer = torch.optim.Adam(seq.parameters(), lr=1.0)
+
+    cx = Variable(torch.zeros(1,H))
+    hx = Variable(torch.zeros(1,H))
+    hidden = [hx,cx]
 
     # begin to train
-    for y in range(245):
-        print('********************************STEP: ', y)
+    for y in range(6):
         input = inVal[y:y+1]
         target = targetVal[y]
+        lossF = 1.0
+        index=0
+        print('********************************STEP: ', y, ' target: ', target)
 
-        def closure():
+        while lossF > 0.0001:
             optimizer.zero_grad()
-            out = seq(input)
+            hidden=(hx,cx)
+            out, hx,cx = seq(input, hidden)
             loss = criterion(out, target)
-            print('out:{0}, loss:{1}'.format(out, loss.data.numpy()[0]))
-            loss.backward()
-            return loss
-
-        optimizer.step(closure)
+            lossF = loss.data.numpy()[0]
+            if index%10 == 0:
+                print('out:{0}, loss:{1}'.format(out, lossF))
+            loss.backward(retain_graph=True)
+            optimizer.step()
+            index+=1
 
     print('********************************Saving Model')
 
@@ -110,8 +103,6 @@ input = inVal[0:1]
 print(input)
 out = seq(input)
 print(out)
-
-exit(1)
 
 pred=[]
 for y in range(245):

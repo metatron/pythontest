@@ -32,6 +32,7 @@ inputData = np.array(stock.as_matrix(columns=['high','low','open','volume','macd
 targetData = np.array(stock.as_matrix(columns=['close']))
 #print(target)
 
+
 class Sequence(torch.nn.Module):
     def __init__(self):
         super(Sequence, self).__init__()

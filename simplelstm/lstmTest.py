@@ -7,16 +7,13 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-def drange(begin, end, step):
-    n = begin
-    while n+step < end:
-     yield n
-     n += step
 
+x = []
+for i in range(0,100):
+    val = i/10.0
+    x.append(val)
 
-print(drange(0.0,1.0,0.1))
-x = np.array()
-# print(x)
+print(x)
 
 y=np.sin(x)
 # print(y)

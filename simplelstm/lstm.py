@@ -53,10 +53,9 @@ class Sequence(torch.nn.Module):
             output = self.linear(h_t2)
             outputs += [output]
         for i in range(future):# if we should predict the future
-            h_t, c_t = self.lstm1(outputs[-1], (h_t, c_t))
+            h_t, c_t = self.lstm1(h_t2, (h_t, c_t))
             h_t2, c_t2 = self.lstm2(h_t, (h_t2, c_t2))
-            output = self.linear(h_t2)
-            outputs += [output]
+            outputs += [h_t2]
         outputs = torch.stack(outputs, 1).squeeze(2)
         return outputs
 

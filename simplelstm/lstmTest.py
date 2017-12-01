@@ -18,16 +18,68 @@ for i in range(0,DATA_NUM):
 y=np.sin(x)
 
 inData = np.zeros((DATA_NUM,X_LEN), dtype=float)
+
 index=0
 for data in x:
     inData[index]=[data,y[index]]
     index += 1
 
-print(inData)
+# print(inData)
 
 #Pytorchクラス
+input_size=2
+hidden_size=20
+output_size=1
+num_layers=2
 
 
+class MyLSTM(nn.Module):
+    def __init__(self):
+        super(MyLSTM, self).__init__()
+        self.fc1 = nn.Linear(input_size,hidden_size)
+        self.lstm = nn.LSTMCell(hidden_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size,output_size)
+
+    def forward(self, x, hidden):
+        y = self.fc1(x)
+        hx,cx = self.lstm(y,hidden)
+        y = self.fc2(hx)
+
+        return y, hx,cx
+
+
+rnn = MyLSTM()
+
+# h0 = Variable(torch.randn(output_size, hidden_size))
+# c0 = Variable(torch.randn(output_size, hidden_size))
+# hidden = [h0,c0]
+inputVal = Variable(torch.FloatTensor(inData))
+# output,hn,cn = rnn(inputVal, hidden)
+
+# トレーニング
+criterion = nn.MSELoss()
+optimizer = optim.LBFGS(rnn.parameters(), lr=0.8)
+
+for i in range(15):
+    print('STEP: ', i)
+    hx = Variable(torch.zeros(output_size, hidden_size))
+    cx = Variable(torch.zeros(output_size, hidden_size))
+    hidden = [hx, cx]
+
+    def closure():
+        optimizer.zero_grad()
+        out, hx,cx = rnn(inputVal, hidden)
+        loss = criterion(out, inputVal)
+        print('loss:', loss.data.numpy()[0])
+        loss.backward()
+        return loss
+
+    optimizer.step(closure)
+
+# y2 = output.data.numpy()
+# print(y)
+
+# exit(1)
 
 plt.figure(figsize=(20, 5))
 plt.title('Predict future values for time sequences', fontsize=10)

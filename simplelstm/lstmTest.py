@@ -24,10 +24,15 @@ for data in x:
     inData[index]=[data,y[index]]
     index += 1
 
-# print(inData)
+#1カラム目（x値）を選出(y:100個、x:1個のマトリックスに修正）
+input=np.reshape(inData[:,0],(100,1))
+
+#2カラム目（y値）を選出
+target=inData[:,1]
+
 
 #Pytorchクラス
-input_size=2
+input_size=1
 hidden_size=20
 output_size=1
 num_layers=2
@@ -53,13 +58,15 @@ rnn = MyLSTM()
 # h0 = Variable(torch.randn(output_size, hidden_size))
 # c0 = Variable(torch.randn(output_size, hidden_size))
 # hidden = [h0,c0]
-inputVal = Variable(torch.FloatTensor(inData))
+inputVal = Variable(torch.FloatTensor(input))
+targetVal = Variable(torch.FloatTensor(target))
 # output,hn,cn = rnn(inputVal, hidden)
 
 # トレーニング
 criterion = nn.MSELoss()
 optimizer = optim.LBFGS(rnn.parameters(), lr=0.8)
 
+hidden=()
 for i in range(15):
     print('STEP: ', i)
     hx = Variable(torch.zeros(output_size, hidden_size))
@@ -69,7 +76,7 @@ for i in range(15):
     def closure():
         optimizer.zero_grad()
         out, hx,cx = rnn(inputVal, hidden)
-        loss = criterion(out, inputVal)
+        loss = criterion(out, targetVal)
         print('loss:', loss.data.numpy()[0])
         loss.backward()
         return loss
@@ -77,7 +84,11 @@ for i in range(15):
     optimizer.step(closure)
 
 # y2 = output.data.numpy()
-# print(y)
+
+# Prediction
+print('**************** PREDICTION ****************')
+pred, hr, cr = rnn(inputVal, hidden)
+#print(pred)
 
 # exit(1)
 

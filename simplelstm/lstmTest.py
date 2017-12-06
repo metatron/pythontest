@@ -67,7 +67,7 @@ criterion = nn.MSELoss()
 optimizer = optim.LBFGS(rnn.parameters(), lr=0.8)
 
 hidden=()
-for i in range(15):
+for i in range(80):
     print('STEP: ', i)
     hx = Variable(torch.zeros(output_size, hidden_size))
     cx = Variable(torch.zeros(output_size, hidden_size))
@@ -88,6 +88,9 @@ for i in range(15):
 # Prediction
 print('**************** PREDICTION ****************')
 pred, hr, cr = rnn(inputVal, hidden)
+loss = criterion(pred, targetVal)
+print('test loss:', loss.data.numpy()[0])
+y2 = pred.data.numpy()
 #print(pred)
 
 # exit(1)
@@ -99,7 +102,8 @@ plt.ylabel('y', fontsize=10)
 plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 
-plt.plot(x,y)
+plt.plot(x,y+1)
+plt.plot(x,y2)
 
 plt.show()
 

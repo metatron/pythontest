@@ -20,6 +20,7 @@ y=np.sin(x)
 
 # 2x+1グラフ予測
 #y=2*np.array(x)+1
+y=np.power(x,2)
 
 inData = np.zeros((DATA_NUM,X_LEN), dtype=float)
 
@@ -68,10 +69,10 @@ targetVal = Variable(torch.FloatTensor(target))
 
 # トレーニング
 criterion = nn.MSELoss()
-optimizer = optim.LBFGS(rnn.parameters(), lr=0.5)
+optimizer = optim.LBFGS(rnn.parameters(), lr=0.8)
 
 hidden=()
-for i in range(10):
+for i in range(30):
     print('STEP: ', i)
     hx = Variable(torch.zeros(output_size, hidden_size))
     cx = Variable(torch.zeros(output_size, hidden_size))

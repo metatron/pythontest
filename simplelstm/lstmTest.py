@@ -15,7 +15,11 @@ for i in range(0,DATA_NUM):
     val = i/10.0
     x.append(val)
 
+# sinグラフ予測
 y=np.sin(x)
+
+# 2x+1グラフ予測
+#y=2*np.array(x)+1
 
 inData = np.zeros((DATA_NUM,X_LEN), dtype=float)
 
@@ -24,7 +28,7 @@ for data in x:
     inData[index]=[data,y[index]]
     index += 1
 
-#1カラム目（x値）を選出(y:100個、x:1個のマトリックスに修正）
+#1カラム目（sinグラフでのx値）を選出(y:100個、x:1個のマトリックスに修正）
 input=np.reshape(inData[:,0],(100,1))
 
 #2カラム目（y値）を選出
@@ -64,10 +68,10 @@ targetVal = Variable(torch.FloatTensor(target))
 
 # トレーニング
 criterion = nn.MSELoss()
-optimizer = optim.LBFGS(rnn.parameters(), lr=0.8)
+optimizer = optim.LBFGS(rnn.parameters(), lr=0.5)
 
 hidden=()
-for i in range(13):
+for i in range(10):
     print('STEP: ', i)
     hx = Variable(torch.zeros(output_size, hidden_size))
     cx = Variable(torch.zeros(output_size, hidden_size))
@@ -103,7 +107,8 @@ plt.ylabel('y', fontsize=10)
 plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 
-plt.plot(x,y+1)
+y=y+1
+plt.plot(x,y)
 plt.plot(x,y2)
 
 plt.show()

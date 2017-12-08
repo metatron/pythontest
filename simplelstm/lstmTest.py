@@ -18,11 +18,11 @@ for i in range(0,DATA_NUM):
     x.append(val)
 
 # sinグラフ予測
-#y=np.sin(x)
+y=np.sin(x)
 
 # 2x+1グラフ予測
 #y=2*np.array(x)+1
-y=np.power(x,2)
+#y=np.power(x,2)
 
 inData = np.zeros((DATA_NUM,X_LEN), dtype=float)
 

@@ -1,3 +1,5 @@
+# Stock Prediction: http://www.jakob-aungiers.com/articles/a/LSTM-Neural-Network-for-Time-Series-Prediction
+
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -16,7 +18,7 @@ for i in range(0,DATA_NUM):
     x.append(val)
 
 # sinグラフ予測
-y=np.sin(x)
+#y=np.sin(x)
 
 # 2x+1グラフ予測
 #y=2*np.array(x)+1
@@ -50,7 +52,13 @@ class MyLSTM(nn.Module):
         self.lstm = nn.LSTMCell(hidden_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size,output_size)
 
-    def forward(self, x, hidden):
+
+    def forward(self, x):
+        hx = Variable(torch.zeros(output_size, hidden_size))
+        cx = Variable(torch.zeros(output_size, hidden_size))
+        hidden = [hx, cx]
+
+
         y = self.fc1(x)
         hx,cx = self.lstm(y,hidden)
         y = self.fc2(hx)
@@ -72,15 +80,16 @@ criterion = nn.MSELoss()
 optimizer = optim.LBFGS(rnn.parameters(), lr=0.8)
 
 hidden=()
-for i in range(30):
+for i in range(100):
     print('STEP: ', i)
+    optimizer.zero_grad()
     hx = Variable(torch.zeros(output_size, hidden_size))
     cx = Variable(torch.zeros(output_size, hidden_size))
     hidden = [hx, cx]
 
     def closure():
         optimizer.zero_grad()
-        out, hx,cx = rnn(inputVal, hidden)
+        out, hx,cx = rnn(inputVal)
         loss = criterion(out, targetVal)
         print('loss:', loss.data.numpy()[0])
         loss.backward()
@@ -93,7 +102,7 @@ for i in range(30):
 # Prediction
 print('**************** PREDICTION ****************')
 
-pred, hr, cr = rnn(inputVal, hidden)
+pred, hr, cr = rnn(inputVal)
 loss = criterion(pred, targetVal)
 print('test loss:', loss.data.numpy()[0])
 y2 = pred.data.numpy()

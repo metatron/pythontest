@@ -1,3 +1,6 @@
+# https://machinelearningmastery.com/time-series-prediction-lstm-recurrent-neural-networks-python-keras/
+# https://keras.io/ja/layers/recurrent/
+
 import keras
 from keras.datasets import mnist
 from keras.models import Sequential
@@ -35,18 +38,14 @@ stock = stss.StockDataFrame().retype(pd.read_csv("../3632.csv"))
 stock['macd']
 # print(stock.as_matrix(columns=['open','close']))
 
+# 始値を入力値、終値を学習値としてデータ作成
+datasetX = np.array(stock.as_matrix(columns=['open', 'macd'])[:100], dtype='float')
+datasetY = np.array(stock.as_matrix(columns=['close'])[:100], dtype='float')
 
-#datasetX = np.array(stock.as_matrix(columns=['open'])[:100], dtype='float')
-#datasetY = np.array(stock.as_matrix(columns=['close'])[:100], dtype='float')
-
-
-#scaler = MinMaxScaler(feature_range=(0, 1))
-#trainX = scaler.fit_transform(datasetX)
-#trainY = scaler.fit_transform(datasetY)
-
-datasetArray = stock.as_matrix(columns=['close'])[:100]
-datasetArray = datasetArray.reshape(100,1)
-datasetX,datasetY = create_dataset(datasetArray.astype('float32'))
+# t+1 = tに加工したデータを作成
+# datasetArray = stock.as_matrix(columns=['close'])[:100]
+# datasetArray = datasetArray.reshape(100,1)
+# datasetX,datasetY = create_dataset(datasetArray.astype('float32'))
 
 scaler = MinMaxScaler(feature_range=(0, 1))
 trainX = scaler.fit_transform(datasetX)
@@ -54,12 +53,13 @@ trainY = scaler.fit_transform(datasetY)
 
 # reshape input to be [samples, time steps, features]
 trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
-testX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
+#testX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
 
 model = Sequential()
 # model.add(Dense(100, input_shape=(1,)))
 # model.add(Activation(activation="softmax"))
-model.add(LSTM(4,input_shape=(1,1)))
+model.add(LSTM(4,input_shape=(1,2)))
+
 model.add(Dense(1))
 
 # sgd = SGD(lr=0.1)
@@ -80,7 +80,7 @@ plt.ylabel('y', fontsize=10)
 plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 
-# plt.plot(trainY)
+plt.plot(datasetY)
 plt.plot(predictedY)# [:,0])
 
 plt.show()

@@ -39,13 +39,8 @@ stock['macd']
 # print(stock.as_matrix(columns=['open','close']))
 
 # 始値を入力値、終値を学習値としてデータ作成
-datasetX = np.array(stock.as_matrix(columns=['open', 'macd'])[:100], dtype='float')
+datasetX = np.array(stock.as_matrix(columns=['open'])[:100], dtype='float')
 datasetY = np.array(stock.as_matrix(columns=['close'])[:100], dtype='float')
-
-# t+1 = tに加工したデータを作成
-# datasetArray = stock.as_matrix(columns=['close'])[:100]
-# datasetArray = datasetArray.reshape(100,1)
-# datasetX,datasetY = create_dataset(datasetArray.astype('float32'))
 
 scaler = MinMaxScaler(feature_range=(0, 1))
 trainX = scaler.fit_transform(datasetX)
@@ -53,12 +48,24 @@ trainY = scaler.fit_transform(datasetY)
 
 # reshape input to be [samples, time steps, features]
 trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
-#testX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
+
+
+#予想するデータを用意
+testDatasetX = np.array(stock.as_matrix(columns=['open'])[100:200], dtype='float')
+testDatasetY = np.array(stock.as_matrix(columns=['close'])[100:200], dtype='float')
+
+testX = scaler.fit_transform(testDatasetX)
+
+# reshape input to be [samples, time steps, features]
+testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
+
+
+
 
 model = Sequential()
 # model.add(Dense(100, input_shape=(1,)))
 # model.add(Activation(activation="softmax"))
-model.add(LSTM(4,input_shape=(1,2)))
+model.add(LSTM(4,input_shape=(1,1)))
 
 model.add(Dense(1))
 
@@ -69,6 +76,7 @@ model.fit(trainX, trainY, epochs=50, batch_size=1)
 
 # make predictions
 trainPredict = model.predict(trainX)
+#trainPredict = model.predict(testX)
 predictedY = scaler.inverse_transform(trainPredict)
 print(predictedY)
 
@@ -81,6 +89,7 @@ plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 
 plt.plot(datasetY)
+#plt.plot(testDatasetY)
 plt.plot(predictedY)# [:,0])
 
 plt.show()

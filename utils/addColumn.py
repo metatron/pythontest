@@ -1,4 +1,4 @@
-import numpy as np
+import numpy
 
 def add_column(mat, data):
     maxNum = mat.shape[0]
@@ -9,15 +9,15 @@ def add_column(mat, data):
     newX=[]
     for i in range(mat.shape[0]):
         tmpX = mat[i,]
-        tmpX = np.append(tmpX,data[i])
+        tmpX = numpy.append(tmpX,data[i])
         newX.append(tmpX)
 
-    return np.array(newX)
+    return numpy.array(newX)
 
 
 if __name__ == '__main__':
 
-    x=np.arange(25).reshape(5,5)
+    x=numpy.arange(25).reshape(5,5)
     print(x)
 
     data = [1,2,3,4,5]

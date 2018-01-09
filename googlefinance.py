@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 import pandas as pd
 import stockstats as stss
 
-url = "https://www.google.com/finance/getprices"
+
+url = "https://finance.google.com/finance/getprices"
 code = 3632
 lsat_date = datetime.now() #データの取得開始日
 interval = 86400  #データの間隔(秒)。1日 = 86400秒

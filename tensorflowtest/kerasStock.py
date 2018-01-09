@@ -102,9 +102,9 @@ if my_file.is_file():
     model = load_model('lstm_model.h5')
 else:
     # 2つ以上のLSTMレイヤーを組み合わせる場合、一つ前のLSTMレイヤのreturn_sequences=Trueにする。
-    model.add(LSTM(10,input_shape=(1,3),return_sequences=True))
+    model.add(LSTM(20,input_shape=(1,3),return_sequences=True))
     model.add(Dropout(0.1))
-    model.add(LSTM(10))
+    model.add(LSTM(20))
     model.add(Dropout(0.1))
     model.add(Dense(1))
 

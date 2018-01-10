@@ -26,11 +26,12 @@ from sklearn.metrics import mean_squared_error
 stock = stss.StockDataFrame().retype(pd.read_csv("../3632.csv"))
 
 #各パラメータ初期化
-stock['macd']
-stock['rsi_6']
+stock.get('macd')
+stock.get('rsi_6') #ワーニングが出るが気にしない
 
 #[close[t-1],close[t]...のデータを作成
 allDataXY = dataByClose.data_by_close(stock)
+print(allDataXY)
 
 allDataX = allDataXY[:,0].reshape(len(allDataXY[:,0]),1)
 allDataY = allDataXY[:,1].reshape(len(allDataXY[:,1]),1)
@@ -53,15 +54,17 @@ allMacdNormalized = macdScaler.fit_transform(allMacd)
 rsiScaler = MinMaxScaler(feature_range=(0, 1))
 allRsiNormalized = rsiScaler.fit_transform(allRsi)
 
+TRAINING_MAX_POS = 200
+TESTING_MAX_POS = TRAINING_MAX_POS + 46
 
 
 # 始値を入力値、終値を学習値としてデータ作成
-trainX = allDataNormalizedX[:100]
-trainY = allDataNormalizedY[:100]
+trainX = allDataNormalizedX[:TRAINING_MAX_POS]
+trainY = allDataNormalizedY[:TRAINING_MAX_POS]
 
 # 各パラメータを追加
-trainX = addColumn.add_column(trainX, allMacdNormalized[:100])
-trainX = addColumn.add_column(trainX, allRsiNormalized[:100])
+trainX = addColumn.add_column(trainX, allMacdNormalized[:TRAINING_MAX_POS])
+trainX = addColumn.add_column(trainX, allRsiNormalized[:TRAINING_MAX_POS])
 
 # reshape input to be [samples, time steps, features]
 trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
@@ -70,18 +73,18 @@ print(trainX)
 
 
 #予想するデータを用意
-testDatasetY = allDataY[100:200]
-testX = allDataNormalizedX[100:200]
-testY = allDataNormalizedY[100:200]
+testDatasetY = allDataY[TRAINING_MAX_POS:TESTING_MAX_POS]
+testX = allDataNormalizedX[TRAINING_MAX_POS:TESTING_MAX_POS]
+testY = allDataNormalizedY[TRAINING_MAX_POS:TESTING_MAX_POS]
 
 # 各パラメータを追加
-testX = addColumn.add_column(testX, allMacdNormalized[100:200])
-testX = addColumn.add_column(testX, allRsiNormalized[100:200])
+testX = addColumn.add_column(testX, allMacdNormalized[TRAINING_MAX_POS:TESTING_MAX_POS])
+testX = addColumn.add_column(testX, allRsiNormalized[TRAINING_MAX_POS:TESTING_MAX_POS])
 
 # reshape input to be [samples, time steps, features]
 testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
 
-print(testX)
+# print(testX)
 
 model = Sequential()
 
@@ -90,20 +93,23 @@ if my_file.is_file():
     model = load_model('lstm_model.h5')
 else:
     # 2つ以上のLSTMレイヤーを組み合わせる場合、一つ前のLSTMレイヤのreturn_sequences=Trueにする。
-    model.add(LSTM(10,input_shape=(1,3),return_sequences=True))
+    model.add(LSTM(20,input_shape=(1,3),return_sequences=True))
     model.add(Dropout(0.1))
-    model.add(LSTM(10))
+    model.add(LSTM(20))
     model.add(Dropout(0.1))
     model.add(Dense(1))
 
     # sgd = SGD(lr=0.1)
     # model.compile(loss='mean_squared_error', optimizer=sgd)
-    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
 
-    model.fit(trainX, trainY, epochs=100, batch_size=1)
+    model.fit(trainX, trainY, epochs=50, batch_size=2)
 
     # save keras model
     # model.save('lstm_model.h5')
+
+# 予測インプット値の確認
+print(scaler.inverse_transform(testX[:,:,0]))
 
 # make predictions
 #trainPredict = model.predict(trainX)

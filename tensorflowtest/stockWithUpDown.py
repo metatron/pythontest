@@ -7,7 +7,7 @@ from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers import LSTM
-from keras.optimizers import RMSprop, SGD
+from keras.optimizers import RMSprop, SGD, Adam
 from keras.models import load_model
 from pathlib import Path
 
@@ -93,19 +93,18 @@ if my_file.is_file():
 else:
     # 2つ以上のLSTMレイヤーを組み合わせる場合、一つ前のLSTMレイヤのreturn_sequences=Trueにする。
     model.add(LSTM(20,input_shape=(1,2),return_sequences=True))
-    # model.add(Dropout(0.1))
+    model.add(Dropout(0.1))
     model.add(LSTM(20))
-    # model.add(Dropout(0.1))
+    model.add(Dropout(0.1))
     # 最終出力次元
-    model.add(Dense(3, activation='sigmoid'))
+    model.add(Dense(1))
 
     # sgd = SGD(lr=0.1)
     # model.compile(loss='mean_squared_error', optimizer=sgd)
 
-    rmsprop = RMSprop()
-    model.compile(loss='categorical_crossentropy', optimizer=rmsprop, metrics=['accuracy'])
+    model.compile(loss='mean_squared_error', optimizer='adam')
 
-    model.fit(trainX, trainY, epochs=50, batch_size=2)
+    model.fit(trainX, trainY, epochs=50, batch_size=1)
 
     # save keras model
     # model.save('lstm_model.h5')

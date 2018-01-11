@@ -4,7 +4,7 @@ import pandas
 
 """
 stockstatsフォーマットにされているデータからCloseを取り出し、
-t+1のcloseが下がった:[1,0,0]、同額:[0,1,0]、上がった:[0,0,1]
+t+1のcloseが下がったor同額:0、上がった:1
 
 Returns:
     float formated numpy array.
@@ -16,14 +16,12 @@ def data_updown(stock):
 
     newY = []
     for i in range(allDataY.shape[0] - 1):
-        upDown = [1,0,0]
-        if(allDataY[i + 1][0] == allDataY[i][0]):
-            upDown = [0,1,0]
-        elif(allDataY[i + 1][0] > allDataY[i][0]):
-            upDown = [0,0,1]
+        upDown = 0
+        if(allDataY[i + 1][0] > allDataY[i][0]):
+            upDown = 1
 
         # []で囲まないと1次元配列になってしまう。
-        newY.append(upDown)
+        newY.append([upDown])
 
     return numpy.array(newY, dtype='float')
 

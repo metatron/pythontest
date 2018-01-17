@@ -5,7 +5,7 @@ import stockstats as stss
 
 
 url = "https://finance.google.com/finance/getprices"
-code = 3632
+code = 7201
 lsat_date = datetime.now() #データの取得開始日
 interval = 86400  #データの間隔(秒)。1日 = 86400秒
 market = "TYO"  #取引所のコード　TYO=東京証券取引所

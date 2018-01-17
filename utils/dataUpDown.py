@@ -26,6 +26,39 @@ def data_updown(stock):
     return numpy.array(newY, dtype='float')
 
 
+
+"""
+上記、stockではなく、arrayが渡ってくる場合はこちらを使用。
+"""
+def data_updownArray(dataArray):
+    newY = []
+    for i in range(dataArray.shape[0] - 1):
+        upDown = 0
+        if(dataArray[i + 1][0] > dataArray[i][0]):
+            upDown = 1
+
+        # []で囲まないと1次元配列になってしまう。
+        newY.append([upDown])
+
+    return numpy.array(newY, dtype='float')
+
+"""
+TODO: 上記、下がる、同額、上がるの三つにする
+"""
+def data_updownMarix(dataArray):
+    newY = []
+    for i in range(dataArray.shape[0] - 1):
+        upDown = 0
+        if(dataArray[i + 1][0] > dataArray[i][0]):
+            upDown = 1
+
+        # []で囲まないと1次元配列になってしまう。
+        newY.append([upDown])
+
+    return numpy.array(newY, dtype='float')
+
+
+
 """
 2次元の
 [[0,0,0],[0,1,0],[0,0,1] ... ]

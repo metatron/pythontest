@@ -1,5 +1,7 @@
 # https://machinelearningmastery.com/time-series-prediction-lstm-recurrent-neural-networks-python-keras/
 # https://keras.io/ja/layers/recurrent/
+# http://dragstar.hatenablog.com/entry/2016/05/24/145543
+# http://arkouji.cocolog-nifty.com/blog/2017/08/rnnlstm-0445.html
 
 import keras
 from keras.datasets import mnist
@@ -59,12 +61,13 @@ TESTING_MAX_POS = TRAINING_MAX_POS + 46
 
 
 # 始値を入力値、終値を学習値としてデータ作成
+testDatasetY = allDataY[:TESTING_MAX_POS]
 trainX = allDataNormalizedX[:TRAINING_MAX_POS]
 trainY = allDataNormalizedY[:TRAINING_MAX_POS]
 
 # 各パラメータを追加
-trainX = addColumn.add_column(trainX, allMacdNormalized[:TRAINING_MAX_POS])
-trainX = addColumn.add_column(trainX, allRsiNormalized[:TRAINING_MAX_POS])
+# trainX = addColumn.add_column(trainX, allMacdNormalized[:TRAINING_MAX_POS])
+# trainX = addColumn.add_column(trainX, allRsiNormalized[:TRAINING_MAX_POS])
 
 # reshape input to be [samples, time steps, features]
 trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
@@ -73,13 +76,13 @@ print(trainX)
 
 
 #予想するデータを用意
-testDatasetY = allDataY[TRAINING_MAX_POS:TESTING_MAX_POS]
+# testDatasetY = allDataY[TRAINING_MAX_POS:TESTING_MAX_POS]
 testX = allDataNormalizedX[TRAINING_MAX_POS:TESTING_MAX_POS]
 testY = allDataNormalizedY[TRAINING_MAX_POS:TESTING_MAX_POS]
 
 # 各パラメータを追加
-testX = addColumn.add_column(testX, allMacdNormalized[TRAINING_MAX_POS:TESTING_MAX_POS])
-testX = addColumn.add_column(testX, allRsiNormalized[TRAINING_MAX_POS:TESTING_MAX_POS])
+# testX = addColumn.add_column(testX, allMacdNormalized[TRAINING_MAX_POS:TESTING_MAX_POS])
+# testX = addColumn.add_column(testX, allRsiNormalized[TRAINING_MAX_POS:TESTING_MAX_POS])
 
 # reshape input to be [samples, time steps, features]
 testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
@@ -93,28 +96,30 @@ if my_file.is_file():
     model = load_model('lstm_model.h5')
 else:
     # 2つ以上のLSTMレイヤーを組み合わせる場合、一つ前のLSTMレイヤのreturn_sequences=Trueにする。
-    model.add(LSTM(20,input_shape=(1,3),return_sequences=True))
-    model.add(Dropout(0.1))
-    model.add(LSTM(20))
-    model.add(Dropout(0.1))
-    model.add(Dense(1))
+    model.add(LSTM(20,input_shape=(1,1),return_sequences=True))
+    model.add(Dropout(0.2))
+    model.add(LSTM(10))
+    model.add(Dropout(0.2))
+    model.add(Dense(5))
+    model.add(Dense(1, activation='linear'))
 
     # sgd = SGD(lr=0.1)
     # model.compile(loss='mean_squared_error', optimizer=sgd)
     model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
 
-    model.fit(trainX, trainY, epochs=50, batch_size=2)
+    model.fit(trainX, trainY, epochs=40, batch_size=2)
 
     # save keras model
     # model.save('lstm_model.h5')
 
 # 予測インプット値の確認
-print(scaler.inverse_transform(testX[:,:,0]))
+# print(scaler.inverse_transform(testX[:,:,0]))
 
 # make predictions
-#trainPredict = model.predict(trainX)
-trainPredict = model.predict(testX)
+trainPredict = model.predict(trainX)
+# trainPredict = model.predict(testX)
 predictedY = scaler.inverse_transform(trainPredict)
+print(testDatasetY)
 print(predictedY)
 
 #plot graph

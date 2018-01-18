@@ -1,4 +1,4 @@
-import numpy
+import numpy as numpy
 import stockstats
 import pandas
 
@@ -10,7 +10,7 @@ Returns:
     float formated numpy array.
 
 """
-def data_updown(stock):
+def data_closeUpDown(stock):
     # [n,1]のデータ
     allDataY = stock.as_matrix(columns=['close'])
 
@@ -60,6 +60,31 @@ def data_updownMarix(dataArray):
 
 
 """
+open, closeとopen(t+1), close(t+1)を使用し、
+open(t+1)がopen, closeと比較したとき最大だったら1,
+そうでなかったら0を返す。
+open(t+1)を判断材料にする理由としては、朝開場時に売り買いを判断する為。
+"""
+def data_openCloseUpDwn(stock):
+    allUpClose = stock.as_matrix(columns=['open','close'])
+    newY = []
+    for i in range(allUpClose.shape[0] - 1):
+        upT = allUpClose[i,0]
+        closeT = allUpClose[i,1]
+        upT1 = allUpClose[i+1,0]
+        maxVal = numpy.amax([upT, closeT, upT1])
+        # up(t), close(t), up(t+1)の中で最大がupT1(t)だった場合、1
+        if(maxVal == upT1):
+            newY.append([1])
+        else:
+            newY.append([0])
+    return numpy.array(newY, dtype='float')
+
+
+
+
+
+"""
 2次元の
 [[0,0,0],[0,1,0],[0,0,1] ... ]
 のデータを
@@ -86,5 +111,7 @@ def convert_updown_toGraph(upDown):
             graphData.append(2)
 
 if __name__ == '__main__':
-    stock = stockstats.StockDataFrame().retype(pandas.read_csv("../3632.csv"))
-    print(data_updown(stock))
+    stock = stockstats.StockDataFrame().retype(pandas.read_csv("../7201.csv"))
+    allUpClose = stock.as_matrix(columns=['open', 'close'])
+    print(allUpClose)
+    print(data_openCloseUpDwn(stock))

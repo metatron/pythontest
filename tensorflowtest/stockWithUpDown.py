@@ -6,7 +6,7 @@ import keras
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
-from keras.layers import LSTM, Embedding, Conv1D, Flatten
+from keras.layers import LSTM, Embedding, Conv1D, Flatten, MaxPooling1D
 from keras.optimizers import RMSprop, SGD, Adam
 from keras.models import load_model
 from pathlib import Path
@@ -25,6 +25,8 @@ from sklearn.metrics import mean_squared_error
 
 from keras.layers.advanced_activations import LeakyReLU
 
+TRAINING_MAX_POS = 200
+TESTING_MAX_POS = TRAINING_MAX_POS + 48
 
 #保存されたCSVを読み込んでstockstatsフォーマットにする
 stock = stss.StockDataFrame().retype(pd.read_csv("../7201.csv"))
@@ -32,6 +34,8 @@ stock = stss.StockDataFrame().retype(pd.read_csv("../7201.csv"))
 #各パラメータ初期化
 stock.get('macd')
 stock.get('rsi_6') #ワーニングが出るが気にしない
+stock.get('tr')
+stock.get('atr')
 
 #[close[t-1],close[t]...のデータを作成
 allDataCloseTime = dataByClose.data_by_close(stock)
@@ -41,11 +45,16 @@ scaler = MinMaxScaler(feature_range=(0, 1))
 allDataNormalized = scaler.fit_transform(allDataCloseTime)
 
 
-#closeデータ取得
-allClose = np.array(stock.as_matrix(columns=['close']), dtype ='float')
+#open, closeデータ取得
+allOpenClose = np.array(stock.as_matrix(columns=['open', 'close']), dtype ='float')
 closeScaler = MinMaxScaler(feature_range=(0, 1))
-allCloseNormalized = closeScaler.fit_transform(allClose)
+allOpenCloseNormalized = closeScaler.fit_transform(allOpenClose)
 
+allOpen = allOpenClose[:,0].reshape(allOpenClose.shape[0],1)
+allOpenNormalized = allOpenCloseNormalized[:,0].reshape(allOpenClose.shape[0],1)
+
+allClose = allOpenClose[:,1].reshape(allOpenClose.shape[0],1)
+allCloseNormalized = allOpenCloseNormalized[:,1].reshape(allOpenClose.shape[0],1)
 
 #volumeデータ取得
 allVolume = np.array(stock.as_matrix(columns=['volume']), dtype ='float')
@@ -57,6 +66,7 @@ allVolumeNormalized = volumeScaler.fit_transform(allVolume)
 allRsi  = np.array(stock.as_matrix(columns=['rsi_6']), dtype ='float')
 #[0] = NaN
 allRsi[0] = 0
+allRsi[1] = 0
 rsiScaler = MinMaxScaler(feature_range=(0, 1))
 allRsiNormalized = rsiScaler.fit_transform(allRsi)
 
@@ -67,25 +77,36 @@ macdScaler = MinMaxScaler(feature_range=(0, 1))
 allMacdNormalized = macdScaler.fit_transform(allMacd)
 
 
+#trデータ取得
+allTr  = np.array(stock.as_matrix(columns=['tr']), dtype ='float')
+allTr[0] = 0
+trScaler = MinMaxScaler(feature_range=(0, 1))
+allTrNormalized = trScaler.fit_transform(allTr)
+
+
+#atrデータ取得
+allAtr  = np.array(stock.as_matrix(columns=['atr']), dtype ='float')
+allAtr[0] = 0
+atrScaler = MinMaxScaler(feature_range=(0, 1))
+allAtrNormalized = atrScaler.fit_transform(allAtr)
+
+
 #上がった下がったデータ
-allDataUpDown = dataUpDown.data_updown(stock)
+allDataUpDown = dataUpDown.data_closeUpDown(stock)
 
 
 #データを全てくっつける (close(t), close(t+1), rsi, macd) -> 成功
 # allData = addColumn.add_column(allDataNormalized, allRsiNormalized[:len(allRsiNormalized)-1])
 # allData = addColumn.add_column(allData, allMacdNormalized[:len(allMacdNormalized)-1])
 
-#close, volume, rsi
-allData = addColumn.add_column(allCloseNormalized, allVolumeNormalized)
+#close, tr, rsi, macd
+allData = addColumn.add_column(allCloseNormalized, allAtrNormalized)
 allData = addColumn.add_column(allData, allRsiNormalized)
 allData = addColumn.add_column(allData, allMacdNormalized)
 
 print(allData.shape)
 print(allDataUpDown.shape)
 
-
-TRAINING_MAX_POS = 200
-TESTING_MAX_POS = TRAINING_MAX_POS + 46
 
 
 # 始値を入力値、上がり下がりを学習値としてデータ作成
@@ -112,12 +133,14 @@ if my_file.is_file():
     model = load_model('cnn_model.h5')
 else:
     #filter: 出力、kernel_size: 各filterの長さ
-    model.add(Conv1D(filters=20, kernel_size=trainX.shape[1], padding='same', input_shape=(1,trainX.shape[2])))
+    model.add(Conv1D(filters=40, kernel_size=trainX.shape[1], padding='same', input_shape=(1,trainX.shape[2])))
+    # model.add(LSTM(20, return_sequences=True, activation='relu'))
+    model.add(Dense(20, activation='relu'))
+    model.add(Dropout(0.2))
     model.add(Flatten())
-    model.add(Dense(10))
-    model.add(Dropout(0.1))
+    model.add(Dropout(0.2))
     # 最終出力次元
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(Dense(1, activation='relu'))
 
     # sgd = SGD(lr=0.1)
     # model.compile(loss='mean_squared_error', optimizer=sgd)
@@ -133,24 +156,45 @@ else:
     model.save('cnn_model.h5')
 
 # make predictions
-trainPredict = model.predict_proba(testX)
+trainPredict = model.predict(testX)
 
-# predictedY = scaler.inverse_transform(trainPredict)
-resultSum = addColumn.add_column(trainPredict,testY)
-print(resultSum)
+#予測を0,1でスケーリングしてみる？->微妙。。
+# resultScaler = MinMaxScaler(feature_range=(0, 1))
+# trainPredict = resultScaler.fit_transform(trainPredict)
+
+# 結果を見るためにデータ用意
+checkData = allClose[TRAINING_MAX_POS:TESTING_MAX_POS]
+checkData = addColumn.add_column(checkData,trainPredict)
+# checkData = addColumn.add_column(checkData,testY)
+checkData.dtype=float
+print(checkData)
 
 #plot graph
-plt.figure(figsize=(20, 5))
-plt.title('Predict future values for time sequences', fontsize=10)
+fig = plt.figure(figsize=(10, 5))
+plt.title('Prediction Graph', fontsize=10)
 plt.xlabel('x', fontsize=10)
-plt.ylabel('y', fontsize=10)
 plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 
-#plt.plot(datasetY)
-p1, = plt.plot(trainPredict)
-p2, = plt.plot(testY)# [:,0])
+# 一つ目
+ax1 = fig.add_subplot(1, 1, 1)
+ax1.set_ylabel('close')
+p1, = ax1.plot(allCloseNormalized[TRAINING_MAX_POS:TESTING_MAX_POS], label=r'close', color='blue')
+p4, = ax1.plot(allRsiNormalized[TRAINING_MAX_POS:TESTING_MAX_POS], label=r'rsi', color='black')
 
-plt.legend([p1, p2], ["trainPredict", "originalY"])
+# 2つ目
+ax2 = ax1.twinx()
+ax2.set_ylabel('prediction')
+p2, = ax2.plot(trainPredict, label=r'prediction', color='orange')
+# 3つ目
+p3, = ax2.plot(allDataUpDown[TRAINING_MAX_POS:TESTING_MAX_POS], color='green')
+
+# 3つ目
+# ax3 = fig.add_subplot(2,1,2)
+# p3, = ax3.plot(closeList, color='green')
+
+
+# plt.legend([p1, p2, p3], ["rsi", "macd", "close"])
+plt.legend([p1, p2, p3, p4], ["close", "prediction", "updown", "rsi"], loc=r"upper left")
 
 plt.show()

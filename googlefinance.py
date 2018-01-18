@@ -11,6 +11,10 @@ interval = 86400  #データの間隔(秒)。1日 = 86400秒
 market = "TYO"  #取引所のコード　TYO=東京証券取引所
 period =  "1Y" #データを取得する期間
 
+# 日経平均
+# code="NI225"
+# market="INDEXNIKKEI"
+
 params = {
   'q': code,
   'i': interval,

@@ -60,7 +60,7 @@ def data_updownMarix(dataArray):
 
 
 """
-open, closeとopen(t+1), close(t+1)を使用し、
+open, closeとopen(t+1)を使用し、
 open(t+1)がopen, closeと比較したとき最大だったら1,
 そうでなかったら0を返す。
 open(t+1)を判断材料にする理由としては、朝開場時に売り買いを判断する為。
@@ -75,8 +75,10 @@ def data_openCloseUpDwn(stock):
         maxVal = numpy.amax([upT, closeT, upT1])
         # up(t), close(t), up(t+1)の中で最大がupT1(t)だった場合、1
         if(maxVal == upT1):
+            # print([upT, closeT, upT1], 1)
             newY.append([1])
         else:
+            # print([upT, closeT, upT1], 0)
             newY.append([0])
     return numpy.array(newY, dtype='float')
 

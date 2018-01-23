@@ -262,7 +262,7 @@ dataArray.append([allData,"NoParam"])
 # allData = addColumn.add_column(allData, allToyotaOpenNormalized[:len(allToyotaOpenNormalized)])
 # dataArray.append([allData,"MacdS&Toyota&Rsi_2"])
 
-# close, open, high, low, rsi
+# close, open, high, low, rsi -> いい感じ
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
 # allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
 # dataArray.append([allData,"Open&Close&High&Low&Rsi"])
@@ -272,7 +272,7 @@ dataArray.append([allData,"NoParam"])
 # allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
 # dataArray.append([allData,"Open&Close&High&Low&MacdH"])
 
-# close, open, high, low, macd, rsi -> いい感じ
+# close, open, high, low, macd, rsi
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
 # allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
 # allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])

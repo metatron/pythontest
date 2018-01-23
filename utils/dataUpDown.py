@@ -1,6 +1,8 @@
 import numpy as numpy
 import stockstats
 import pandas
+import math
+
 
 """
 stockstatsフォーマットにされているデータからCloseを取り出し、
@@ -79,6 +81,49 @@ def data_openCloseUpDwn(stock):
             newY.append([1])
         else:
             # print([upT, closeT, upT1], 0)
+            newY.append([0])
+    return numpy.array(newY, dtype='float')
+
+
+"""
+open, closeとopen(t+1), rsiを使用し、
+open(t+1)がopen, closeと比較したとき最大、
+さらに、rsi(t) - rsi(t-1)値がプラスになった場合、1
+そうでなかったら0を返す。
+open(t+1)を判断材料にする理由としては、朝開場時に売り買いを判断する為。
+"""
+def data_openCloseUpDwnRsi(stock):
+    allUpClose = stock.as_matrix(columns=['open','close'])
+    stock.get('rsi_6')  # ワーニングが出るが気にしない
+    allRsi = stock.as_matrix(columns=['rsi_6'])
+    newY = []
+    for i in range(allUpClose.shape[0] - 1):
+        #open(t), close(t), open(t+1)を比較
+        upT = allUpClose[i,0]
+        closeT = allUpClose[i,1]
+        upT1 = allUpClose[i+1,0]
+        maxVal = numpy.amax([upT, closeT, upT1])
+
+        rsiBuySign = 0
+        #rsi比較
+        if(math.isnan(allRsi[i])):
+            allRsi[i] = 0
+
+        #30以下の場合チェック
+        if(i>1):
+            if(allRsi[i]-allRsi[i-1] < 0):
+                rsiBuySign = 1
+
+        # up(t), close(t), up(t+1)の中で最大がupT1(t)だった場合、1
+        if(maxVal == upT1):
+            if(rsiBuySign == 1):
+                print([upT, closeT, upT1, allRsi[i]], 1)
+                newY.append([1])
+            else:
+                print([upT, closeT, upT1, allRsi[i]], 0)
+                newY.append([0])
+        else:
+            print([upT, closeT, upT1, allRsi[i]], 0)
             newY.append([0])
     return numpy.array(newY, dtype='float')
 

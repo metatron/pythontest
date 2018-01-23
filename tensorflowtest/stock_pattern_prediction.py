@@ -26,11 +26,20 @@ import tensorflow as tf
 np.random.seed(777)
 tf.set_random_seed(777)
 
-TRAINING_MAX_POS = 200
-TESTING_MAX_POS = TRAINING_MAX_POS + 49
 
 #保存されたCSVを読み込んでstockstatsフォーマットにする
 stock = stss.StockDataFrame().retype(pd.read_csv("../7201.csv"))
+stock_nikkei = stss.StockDataFrame().retype(pd.read_csv("../NI225.csv"))
+stock_toyota = stss.StockDataFrame().retype(pd.read_csv("../7203.csv"))
+
+# グラフ用
+graphData = np.array(stock.as_matrix(columns=['open', 'high', 'low', 'close']), dtype ='float')
+
+NUM_OF_TEST = 46
+TRAINING_MAX_POS = graphData.shape[0] - NUM_OF_TEST
+TESTING_MAX_POS = graphData.shape[0]
+
+print(graphData[TRAINING_MAX_POS:TESTING_MAX_POS])
 
 #各パラメータ初期化
 stock.get('macd')
@@ -45,8 +54,6 @@ allDataCloseTime = dataByClose.data_by_close(stock)
 scaler = MinMaxScaler(feature_range=(0, 1))
 allDataNormalized = scaler.fit_transform(allDataCloseTime)
 
-# グラフ用
-graphData = np.array(stock.as_matrix(columns=['open', 'high', 'low', 'close']), dtype ='float')
 
 
 #open, closeデータ取得
@@ -59,6 +66,14 @@ allOpenNormalized = allOpenCloseNormalized[:,0].reshape(allOpenClose.shape[0],1)
 
 allClose = allOpenClose[:,1].reshape(allOpenClose.shape[0],1)
 allCloseNormalized = allOpenCloseNormalized[:,1].reshape(allOpenClose.shape[0],1)
+
+
+allHighLow = np.array(stock.as_matrix(columns=['high', 'low']), dtype ='float')
+allHighLowNormalized = closeScaler.fit_transform(allHighLow)
+
+allHighNormalized = allHighLowNormalized[:,0].reshape(allHighLow.shape[0],1)
+allLowNormalized = allHighLowNormalized[:,1].reshape(allHighLow.shape[0],1)
+
 
 #volumeデータ取得
 allVolume = np.array(stock.as_matrix(columns=['volume']), dtype ='float')
@@ -80,12 +95,15 @@ allMacd  = np.array(stock.as_matrix(columns=['macd']), dtype ='float')
 macdScaler = MinMaxScaler(feature_range=(0, 1))
 allMacdNormalized = macdScaler.fit_transform(allMacd)
 
-#macdの差分取得
+#macdHist
 allMacdH  = np.array(stock.as_matrix(columns=['macdh']), dtype ='float')
+macdHScaler = MinMaxScaler(feature_range=(0, 1))
+allMacdHNormalized = macdHScaler.fit_transform(allMacdH)
+
+#macdSig
 allMacdS  = np.array(stock.as_matrix(columns=['macds']), dtype ='float')
-allMacdDif = allMacdH - allMacdS
-macdDifScaler = MinMaxScaler(feature_range=(0, 1))
-allMacdDifNormalized = macdDifScaler.fit_transform(allMacdDif)
+macdSScaler = MinMaxScaler(feature_range=(0, 1))
+allMacdSNormalized = macdSScaler.fit_transform(allMacdS)
 
 #trデータ取得
 allTr  = np.array(stock.as_matrix(columns=['tr']), dtype ='float')
@@ -147,10 +165,22 @@ cciScaler = MinMaxScaler(feature_range=(0, 1))
 allCciNormalized = wr6Scaler.fit_transform(allCci)
 
 
+# 日経平均取り込み
+allNikkeiOpen  = np.array(stock_nikkei.as_matrix(columns=['open']), dtype ='float')
+nikkeiOpenScaler = MinMaxScaler(feature_range=(0, 1))
+allNikkeiOpenNormalized = nikkeiOpenScaler.fit_transform(allNikkeiOpen)
+
+# トヨタ取り込み
+allToyotaOpen  = np.array(stock_toyota.as_matrix(columns=['open']), dtype ='float')
+toyotaOpenScaler = MinMaxScaler(feature_range=(0, 1))
+allToyotaOpenNormalized = toyotaOpenScaler.fit_transform(allToyotaOpen)
+
+
 
 #上がった下がったデータ
 # allDataUpDown = dataUpDown.data_closeUpDown(stock)
 allDataUpDown = dataUpDown.data_openCloseUpDwn(stock)
+# allDataUpDown = dataUpDown.data_openCloseUpDwnRsi(stock)
 
 
 # print(addColumn.add_column(allOpenClose[:len(allOpenClose)-1], allDataUpDown))
@@ -170,6 +200,13 @@ dataArray = []
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)-1], allOpenT1)
 # dataArray.append([allData,"NoParam"])
 
+#データをくっつける2（open(t), close(t), high(t), low(t), open(t+1))
+allOpenT1 = allOpenNormalized[1:]
+allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)-1], allHighLowNormalized[:len(allMacdSNormalized)-1])
+allData = addColumn.add_column(allData, allOpenT1)
+dataArray.append([allData,"NoParam"])
+
+
 
 """
 === 自作パラメータ ===
@@ -178,16 +215,74 @@ dataArray = []
 # allData = addColumn.add_column(allData, allTrNormalized[:len(allTrNormalized)])
 # dataArray.append([allData,"Macd&Tr"])
 
-# macdh - macds
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdDifNormalized[:len(allMacdDifNormalized)])
-# dataArray.append([allData,"MacdHist-MacdSignal"])
+# macdH
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdHNormalized[:len(allMacdHNormalized)])
+# dataArray.append([allData,"MacdHist"])
+
+# macdS
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdSNormalized[:len(allMacdSNormalized)])
+# dataArray.append([allData,"MacdSig"])
 
 # macd & rsi
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allRsiNormalized[:len(allRsiNormalized)])
-# allData = addColumn.add_column(allData, allMacdNormalized[:len(allMacdNormalized)])
-# allData = addColumn.add_column(allData, allVolumeNormalized[:len(allTrNormalized)])
-# dataArray.append([allData,"Rsi&Macd&Tr"])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdNormalized[:len(allMacdNormalized)])
+# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+# dataArray.append([allData,"Macd&Rsi"])
 
+
+# macds & rsi
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdSNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+# dataArray.append([allData,"MacdS&Rsi"])
+
+
+# macdh & rsi
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdHNormalized[:len(allMacdHNormalized)])
+# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+# dataArray.append([allData,"MacdH&Rsi"])
+
+
+# macd & rsi & Vol & Tr
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allRsiNormalized[:len(allRsiNormalized)])
+# allData = addColumn.add_column(allData, allVolumeNormalized[:len(allVolumeNormalized)])
+# allData = addColumn.add_column(allData, allVolumeNormalized[:len(allTrNormalized)])
+# dataArray.append([allData,"Rsi&Vol&Tr"])
+
+
+# macds & nikkei & Toyota
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdSNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+# allData = addColumn.add_column(allData, allNikkeiOpenNormalized[:len(allNikkeiOpenNormalized)])
+# allData = addColumn.add_column(allData, allToyotaOpenNormalized[:len(allToyotaOpenNormalized)])
+# dataArray.append([allData,"MacdS&Rsi&Nikkei&Toyota"])
+
+
+# macds & toyota & rsi
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdSNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+# allData = addColumn.add_column(allData, allToyotaOpenNormalized[:len(allToyotaOpenNormalized)])
+# dataArray.append([allData,"MacdS&Toyota&Rsi_2"])
+
+# close, open, high, low, rsi
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+# dataArray.append([allData,"Open&Close&High&Low&Rsi"])
+
+# close, open, high, low, macd
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH"])
+
+# close, open, high, low, macd, rsi -> いい感じ
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
+# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi"])
+
+
+# close, open, high, low, toyota
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allData, allToyotaOpenNormalized[:len(allToyotaOpenNormalized)])
+# dataArray.append([allData,"Open&Close&High&Low&Toyota"])
 
 
 
@@ -200,8 +295,8 @@ dataArray = []
 
 
 # macd
-allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdNormalized[:len(allMacdNormalized)])
-dataArray.append([allData,"Macd"])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allMacdNormalized[:len(allMacdNormalized)])
+# dataArray.append([allData,"Macd"])
 
 # # atr
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allAtrNormalized[:len(allAtrNormalized)])
@@ -283,8 +378,6 @@ for i in range(len(dataArray)):
     close_ = graphData[TRAINING_MAX_POS:TESTING_MAX_POS, 3]
     candlestick2_ohlc(ax1, open_, high_, low_, close_, colorup="b", width=0.5, colordown="r")
 
-    print(graphData[TRAINING_MAX_POS:TESTING_MAX_POS])
-
     # 0,1でスケーリングして見る。。
     # predScaler = MinMaxScaler(feature_range=(0, 1))
     # trainPredict = predScaler.fit_transform(trainPredict)
@@ -304,7 +397,7 @@ for i in range(len(dataArray)):
     if(os.path.exists("../figures") != True):
         os.mkdir("../figures")
 
-    plt.savefig("../figures/" + title + ".jpg", format="jpg", dpi=400)
+    plt.savefig("../figures/" + title + ".jpg", format="jpg", dpi=80)
 
     # plt.show()
 

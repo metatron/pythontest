@@ -22,6 +22,9 @@ stock.get('boll_ub') #ボリンジャー
 stock.get('boll_lb') #ボリンジャー
 stock.get('tr')
 stock.get('atr')
+stock.get('kdjk')
+stock.get('kdjd')
+stock.get('kdjj')
 
 
 openList = stock.as_matrix(columns=['open'])
@@ -36,6 +39,9 @@ bollLBList = stock.as_matrix(columns=['boll_lb'])
 bollUBList = stock.as_matrix(columns=['boll_ub'])
 trList = stock.as_matrix(columns=['tr'])
 atrList = stock.as_matrix(columns=['atr'])
+kdjkList = stock.as_matrix(columns=['kdjk'])
+kdjdList = stock.as_matrix(columns=['kdjd'])
+kdjjList = stock.as_matrix(columns=['kdjj'])
 
 START_POS = 440
 
@@ -50,6 +56,9 @@ bollLBList = bollLBList[START_POS:len(bollLBList)]
 bollUBList = bollUBList[START_POS:len(bollUBList)]
 trList = trList[START_POS:len(trList)]
 atrList = atrList[START_POS:len(atrList)]
+kdjkList = kdjkList[START_POS:len(kdjkList)]
+kdjdList = kdjdList[START_POS:len(kdjdList)]
+kdjjList = kdjjList[START_POS:len(kdjjList)]
 
 
 
@@ -87,9 +96,10 @@ if __name__ == '__main__':
 
     #2つ目
     ax2 = ax1.twinx()
-    ax2.set_ylabel('rsi')
-    p3, = ax2.plot(rsi6List, label=r'rsi6', color='orange')
-    # p5, = ax2.plot(rsi12List, label=r'rsi12', color='pink')
+    ax2.set_ylabel('stochastic')
+    p3, = ax2.plot(kdjkList, label=r'stochastic', color='orange')
+    p5, = ax2.plot(kdjdList, label=r'stochastic', color='pink')
+    p6, = ax2.plot(kdjjList, label=r'stochastic', color='red')
     #
     # plt.legend([p3, p5], ["rsi6", "rsi12"], loc=r'upper left')
 

@@ -11,12 +11,14 @@ import tensorflow as tf
 
 
 class StockPatternDetect():
-    def __init__(self, trainX, trainY, testX, testY, saveModel=True):
+    def __init__(self, trainX, trainY, testX, testY, saveModel=True, activation='tanh', optimizer='rmsprop'):
         self.trainX = trainX
         self.trainY = trainY
         self.testX = testX
         self.testY = testY
         self.saveModel = saveModel
+        self.activation = activation
+        self.optimizer = optimizer
 
 
     def train_model(self, epochs_=50, modelfilepath='cnn_model.h5'):
@@ -30,19 +32,19 @@ class StockPatternDetect():
             model.add(Conv1D(filters=40, kernel_size=self.trainX.shape[1], padding='same', input_shape=(1, self.trainX.shape[2])))
             # model.add(LSTM(20, return_sequences=True, activation='relu'))
             model.add(MaxPooling1D(pool_size=2, padding="same"))
-            model.add(Dense(20, activation='tanh'))
+            model.add(Dense(20, activation=self.activation))
             model.add(Dropout(0.2))
             model.add(Flatten())
             model.add(Dropout(0.2))
             # 最終出力次元
-            model.add(Dense(1, activation='tanh'))
+            model.add(Dense(1, activation=self.activation))
 
             # sgd = SGD(lr=0.1)
             # model.compile(loss='mean_squared_error', optimizer=sgd)
 
             model.summary()
 
-            model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+            model.compile(loss='binary_crossentropy', optimizer=self.optimizer, metrics=['accuracy'])
 
             # earlyStp = EarlyStopping(mode='auto', patience=5) #->やらない方が正確
             # validation_split (訓練データの一部をバリデーションデータセットとして使用）

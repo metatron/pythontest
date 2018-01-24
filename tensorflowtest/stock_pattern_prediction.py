@@ -201,10 +201,10 @@ dataArray = []
 # dataArray.append([allData,"NoParam"])
 
 #データをくっつける2（open(t), close(t), high(t), low(t), open(t+1))
-allOpenT1 = allOpenNormalized[1:]
-allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)-1], allHighLowNormalized[:len(allMacdSNormalized)-1])
-allData = addColumn.add_column(allData, allOpenT1)
-dataArray.append([allData,"NoParam"])
+# allOpenT1 = allOpenNormalized[1:]
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)-1], allHighLowNormalized[:len(allMacdSNormalized)-1])
+# allData = addColumn.add_column(allData, allOpenT1)
+# dataArray.append([allData,"NoParam"])
 
 
 
@@ -263,24 +263,36 @@ dataArray.append([allData,"NoParam"])
 # dataArray.append([allData,"MacdS&Toyota&Rsi_2"])
 
 # close, open, high, low, rsi -> いい感じ
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
 # allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
-# dataArray.append([allData,"Open&Close&High&Low&Rsi"])
+# dataArray.append([allData,"Open&Close&High&Low&Rsi", None, None])
 
-# close, open, high, low, macd
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# close, open, high, low, macdh -> いい感じ
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
 # allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
-# dataArray.append([allData,"Open&Close&High&Low&MacdH"])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH", None, None])
 
-# close, open, high, low, macd, rsi
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# close, open, high, low, macd, rsi -> いい感じ
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
 # allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
 # allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
-# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi"])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_tanh_rmsprop", None, None]) # ->これが一番
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_relu_rmsprop", 'relu', None])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_elu_rmsprop", 'elu', None])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_softmax_rmsprop", 'softmax', None])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_selu_rmsprop", 'selu', None])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_sigmoid_rmsprop", 'sigmoid', None])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_tanh_adam", 'tanh', 'adam'])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_relu_adam", 'relu', 'adam'])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_elu_adam", 'elu', 'adam'])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_softmax_adam", 'softmax', 'adam'])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_selu_adam", 'selu', 'adam'])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH&Rsi_sigmoid_adam", 'sigmoid', 'adam'])
+
 
 
 # close, open, high, low, toyota
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allMacdSNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
 # allData = addColumn.add_column(allData, allToyotaOpenNormalized[:len(allToyotaOpenNormalized)])
 # dataArray.append([allData,"Open&Close&High&Low&Toyota"])
 
@@ -299,48 +311,63 @@ dataArray.append([allData,"NoParam"])
 # dataArray.append([allData,"Macd"])
 
 # # atr
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allAtrNormalized[:len(allAtrNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allAtrNormalized[:len(allAtrNormalized)])
 # dataArray.append([allData,"Atr"])
 #
 #
 # # tr
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allTrNormalized[:len(allTrNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allTrNormalized[:len(allTrNormalized)])
 # dataArray.append([allData,"Tr"])
 #
 #
-# # kdj
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allKdjNormalized[:len(allKdjNormalized)])
-# dataArray.append([allData,"Kdj"])
+# kdj
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allKdjNormalized[:len(allKdjNormalized)])
+# dataArray.append([allData,"Kdj", None, None])
 #
 #
 # # dma
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allDmaNormalized[:len(allDmaNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allDmaNormalized[:len(allDmaNormalized)])
 # dataArray.append([allData,"Dma"])
 #
 #
 # # adx
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allAdxNormalized[:len(allAdxNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allAdxNormalized[:len(allAdxNormalized)])
 # dataArray.append([allData,"Adx"])
 #
 #
 # # trix
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allTrxNormalized[:len(allTrxNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allTrxNormalized[:len(allTrxNormalized)])
 # dataArray.append([allData,"Trix"])
 #
 #
 # # wr
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allWr6Normalized[:len(allWr6Normalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allWr6Normalized[:len(allWr6Normalized)])
 # dataArray.append([allData,"Wr"])
 #
 #
 # # cci
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allCciNormalized[:len(allCciNormalized)])
+# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+# allData = addColumn.add_column(allData, allCciNormalized[:len(allCciNormalized)])
 # dataArray.append([allData,"Cci"])
 
 
 for i in range(len(dataArray)):
     data_ = dataArray[i][0]
     title = dataArray[i][1]
+    activation = dataArray[i][2]
+    if(activation == None):
+        activation = 'tanh'
+
+    optimizer = dataArray[i][3]
+    if(optimizer == None):
+        optimizer = 'rmsprop'
 
     print('===================== ' + title + ' ===================== ')
 
@@ -357,7 +384,7 @@ for i in range(len(dataArray)):
     testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
 
     #stock prediction
-    spdClass = spd(trainX, trainY, testX, testY, False)
+    spdClass = spd(trainX, trainY, testX, testY, False, activation, optimizer)
     trainPredict = spdClass.train_model()
 
 

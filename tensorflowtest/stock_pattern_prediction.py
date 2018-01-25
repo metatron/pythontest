@@ -11,7 +11,7 @@ from matplotlib.finance import candlestick2_ohlc
 import stockstats as stss
 import pandas as pd
 
-from utils import addColumn, dataByClose, dataUpDown
+from utils import addColumn, dataByClose, dataUpDown, data_converter
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
@@ -23,14 +23,17 @@ from pathlib import Path
 import tensorflow as tf
 
 # 乱数シード固定（macdで調整）
-np.random.seed(777)
-tf.set_random_seed(777)
+# RAND_SEED = 777 #日産
+RAND_SEED = 778 #日産 2018/01/15更新
+
+np.random.seed(RAND_SEED)
+tf.set_random_seed(RAND_SEED)
 
 
 #保存されたCSVを読み込んでstockstatsフォーマットにする
-stock = stss.StockDataFrame().retype(pd.read_csv("../7201.csv"))
-stock_nikkei = stss.StockDataFrame().retype(pd.read_csv("../NI225.csv"))
-stock_toyota = stss.StockDataFrame().retype(pd.read_csv("../7203.csv"))
+stock = stss.StockDataFrame().retype(pd.read_csv("../7201.csv")) #日産
+stock_nikkei = stss.StockDataFrame().retype(pd.read_csv("../NI225.csv")) #日経
+stock_toyota = stss.StockDataFrame().retype(pd.read_csv("../7203.csv")) #トヨタ
 
 # グラフ用
 graphData = np.array(stock.as_matrix(columns=['open', 'high', 'low', 'close']), dtype ='float')
@@ -180,7 +183,7 @@ allToyotaOpenNormalized = toyotaOpenScaler.fit_transform(allToyotaOpen)
 #上がった下がったデータ
 # allDataUpDown = dataUpDown.data_closeUpDown(stock)
 allDataUpDown = dataUpDown.data_openCloseUpDwn(stock)
-# allDataUpDown = dataUpDown.data_openCloseUpDwnRsi(stock)
+# allDataUpDown = dataUpDown.data_openCloseUpDwn2(stock)
 
 
 # print(addColumn.add_column(allOpenClose[:len(allOpenClose)-1], allDataUpDown))
@@ -263,14 +266,14 @@ dataArray = []
 # dataArray.append([allData,"MacdS&Toyota&Rsi_2"])
 
 # close, open, high, low, rsi -> いい感じ
-# allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
-# allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
-# dataArray.append([allData,"Open&Close&High&Low&Rsi", None, None])
+allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
+allData = addColumn.add_column(allData, allRsiNormalized[:len(allRsiNormalized)])
+dataArray.append([allData,"Open&Close&High&Low&Rsi", None, None])
 
 # close, open, high, low, macdh -> いい感じ
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
 # allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
-# dataArray.append([allData,"Open&Close&High&Low&MacdH", None, None])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH_lstm", None, None])
 
 # close, open, high, low, macd, rsi -> いい感じ
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
@@ -418,6 +421,18 @@ for i in range(len(dataArray)):
     # 0.5線
     middleLine = np.ones(len(allDataUpDown[TRAINING_MAX_POS:TESTING_MAX_POS])+1)*0.5
     ax2.plot(middleLine, color='red')
+
+    #予測を1,0に変換
+    updownPred = data_converter.convert_results_updown(trainPredict)
+    # p4, = ax2.plot(updownPred, label=r'prediction', color='pink')
+
+    #一番最後は予測できないのでとりあえず0を追加
+    tmpArray = allDataUpDown[TRAINING_MAX_POS:TESTING_MAX_POS]
+    tmpArray = np.append(tmpArray, [0])
+    tmpArray = tmpArray.reshape(len(tmpArray), 1)
+    resArray = addColumn.add_column(trainPredict, tmpArray)
+    resArray = addColumn.add_column(resArray, updownPred)
+    print(resArray)
 
     plt.legend([p2, p3], ["prediction", "updown"], loc=r"upper left")
 

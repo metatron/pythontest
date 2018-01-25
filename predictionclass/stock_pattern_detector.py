@@ -30,7 +30,8 @@ class StockPatternDetect():
         else:
             # filter: 出力、kernel_size: 各filterの長さ
             model.add(Conv1D(filters=40, kernel_size=self.trainX.shape[1], padding='same', input_shape=(1, self.trainX.shape[2])))
-            # model.add(LSTM(20, return_sequences=True, activation='relu'))
+            # あった方が若干精度上がるがほんとに微量
+            # model.add(LSTM(20, return_sequences=True, activation=self.activation))
             model.add(MaxPooling1D(pool_size=2, padding="same"))
             model.add(Dense(20, activation=self.activation))
             model.add(Dropout(0.2))

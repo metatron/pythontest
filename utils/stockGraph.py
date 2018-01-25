@@ -43,7 +43,7 @@ kdjkList = stock.as_matrix(columns=['kdjk'])
 kdjdList = stock.as_matrix(columns=['kdjd'])
 kdjjList = stock.as_matrix(columns=['kdjj'])
 
-START_POS = 440
+START_POS = 420
 
 closeList = closeList[START_POS:len(closeList)]
 rsi6List = rsi6List[START_POS:len(rsi6List)]

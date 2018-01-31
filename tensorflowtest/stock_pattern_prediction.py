@@ -273,7 +273,7 @@ dataArray.append([allData,"Open&Close&High&Low&Rsi", None, None])
 # close, open, high, low, macdh -> いい感じ
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
 # allData = addColumn.add_column(allData, allMacdHNormalized[:len(allMacdHNormalized)])
-# dataArray.append([allData,"Open&Close&High&Low&MacdH_lstm", None, None])
+# dataArray.append([allData,"Open&Close&High&Low&MacdH", None, None])
 
 # close, open, high, low, macd, rsi -> いい感じ
 # allData = addColumn.add_column(allOpenCloseNormalized[:len(allOpenCloseNormalized)], allHighLowNormalized[:len(allHighLowNormalized)])
@@ -430,7 +430,8 @@ for i in range(len(dataArray)):
     tmpArray = allDataUpDown[TRAINING_MAX_POS:TESTING_MAX_POS]
     tmpArray = np.append(tmpArray, [0])
     tmpArray = tmpArray.reshape(len(tmpArray), 1)
-    resArray = addColumn.add_column(trainPredict, tmpArray)
+    closePriceArray = allOpenClose[TRAINING_MAX_POS:TESTING_MAX_POS]
+    resArray = addColumn.add_column(closePriceArray, tmpArray)
     resArray = addColumn.add_column(resArray, updownPred)
     print(resArray)
 

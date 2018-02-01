@@ -18,11 +18,11 @@ from rl.agents.dqn import DQNAgent
 from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
-ENV_NAME = 'CartPole-v0'
+ENV_NAME = 'MountainCar-v0'
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
-env = wrappers.Monitor(env, './CartPole', force=True) #　追加
+env = wrappers.Monitor(env, './MountainCar', force=True) #　追加
 np.random.seed(123)
 env.seed(123)
 nb_actions = env.action_space.n

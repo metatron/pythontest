@@ -39,7 +39,7 @@ class DQNAgent():
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
         model = Sequential()
-        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(24, input_shape=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse',
@@ -68,12 +68,14 @@ class DQNAgent():
 
             if not done:
                 # predict the future discounted reward
+                next_state = np.reshape(next_state, (1, next_state.shape[0], next_state.shape[1]))
                 target = (reward + self.gamma *
-                          np.amax(self.model.predict(next_state)[0]))
+                          np.amax(self.model.predict(next_state)))
 
             # make the agent to approximately map
             # the current state to future discounted reward
             # We'll call that target_f
+            state = np.reshape(state, state.shape[0], state.shape[1])
             target_f = self.model.predict(state)
             target_f[0][action] = target
 
@@ -94,7 +96,7 @@ if __name__ == "__main__":
     env = gym.make(ENV_NAME)
     # env = wrappers.Monitor(env, './Maze', force=True)  # 追加
 
-    state_size = env.observation_space.shape[1]
+    state_size =(1, ) + env.observation_space.shape
     action_size = env.action_space.n
     agent = DQNAgent(state_size, action_size)
     # agent.load("./save/cartpole-dqn.h5")

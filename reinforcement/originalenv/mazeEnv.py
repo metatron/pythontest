@@ -53,6 +53,7 @@ class MazeEnv(gym.Env):
 
     def _step(self, action):
         # 1ステップ進める処理を記述。戻り値は observation, reward, done(ゲーム終了したか), info(追加の情報の辞書)
+        next_pos = []
         if action == 0:
             next_pos = self.pos + [0, 1]
         elif action == 1:
@@ -62,7 +63,7 @@ class MazeEnv(gym.Env):
         elif action == 3:
             next_pos = self.pos + [-1, 0]
 
-        if self._is_movable(next_pos):
+        if len(next_pos) > 0 and self._is_movable(next_pos):
             self.pos = next_pos
             moved = True
         else:

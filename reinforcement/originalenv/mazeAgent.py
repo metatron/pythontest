@@ -39,11 +39,13 @@ class DQNAgent():
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
         model = Sequential()
-        model.add(Dense(24, batch_input_shape=(1,)+self.state_size, activation='relu'))
+        model.add(Dense(24, input_shape=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
+        model.add(Flatten())
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse',
                       optimizer=Adam(lr=self.learning_rate))
+        model.summary()
         return model
 
     def remember(self, state, action, reward, next_state, done):
@@ -54,7 +56,6 @@ class DQNAgent():
             return random.randrange(self.action_size)
 
         # Predict the reward value based on the given state
-        state = np.reshape(state, (1, state.shape[0], state.shape[1]))
         act_values = self.model.predict(state)
         return np.argmax(act_values[0])  # returns action
 
@@ -69,14 +70,12 @@ class DQNAgent():
 
             if not done:
                 # predict the future discounted reward
-                next_state = np.reshape(next_state, (1, next_state.shape[0], next_state.shape[1]))
                 target = (reward + self.gamma *
-                          np.amax(self.model.predict(next_state)))
+                          np.amax(self.model.predict(next_state)[0]))
 
             # make the agent to approximately map
             # the current state to future discounted reward
             # We'll call that target_f
-            state = np.reshape(state, (1, state.shape[0], state.shape[1]))
             target_f = self.model.predict(state)
             target_f[0][action] = target
 
@@ -105,17 +104,18 @@ if __name__ == "__main__":
     batch_size = 32
 
     # a number of games we want the agent to play.
-    EPISODES = 1000
+    EPISODES = 300
 
     for e in range(EPISODES):
         state = env.reset()
-        # state = np.reshape(state, [1, state_size])
+        state = np.reshape(state, [1, state_size[0],state_size[1]])
         for time in range(500):
-            # env.render()
+            env.render()
+            print()
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
             reward = reward if not done else -10
-            # next_state = np.reshape(next_state, [1, state_size])
+            next_state = np.reshape(next_state, [1, state_size[0], state_size[1]])
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             if done:

@@ -36,6 +36,7 @@ class KabuComMainController():
         # datetime, open, high, low, close, volume of 1 min. dict.
         self._stockStats = {}
 
+
     """
         カブ.comにログインする。
     """
@@ -78,7 +79,7 @@ class KabuComMainController():
             volumePrice = self._driver.find_element_by_xpath('//*[@id="fullquotetbl"]/tbody/tr[4]/td/div/table/tbody/tr[4]/td[2]').get_attribute('innerHTML')
             volumePrice = str(volumePrice).replace(',', '')
 
-            print("{}, {}".format(stockPrice,volumePrice))
+            # print("{}, {}".format(stockPrice,volumePrice))
 
             #更新ボタンが表示されるまで待つ
             updateImg = WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.XPATH, '//table[@id="fullquotetbl"]/tbody/tr[1]/td/div/table/tbody/tr[1]/td[10]/a/img')))
@@ -91,8 +92,15 @@ class KabuComMainController():
             #更新ごとの状態を保存。datetime, stockprice, volume
             self._stockTicks.append([nowDateTime, stockPrice, volumePrice])
 
-            #アップデート
+            #_stockStatsアップデート
             self._statusUpdate()
+
+            #stockstatsにコンバート
+            stockstatClass = self.convertToStockStats()
+            stockstatClass.get("macd")
+            allMacd = stockstatClass.as_matrix(columns=['macd'])
+
+            print("price:{}, volume:{}, macd:{}".format(stockPrice,volumePrice,allMacd[-1]))
 
             #出力
             self._writeStockTick()
@@ -110,7 +118,9 @@ class KabuComMainController():
                 isValidTime = False
 
 
-
+    """
+        ブラウザ削除
+    """
     def close(self):
         self._driver.close()
         self._driver.quit()
@@ -165,6 +175,9 @@ class KabuComMainController():
         self._prevTick = tick
 
 
+    """
+        self._stockStatsからstockstatsフォーマットのデータにConvertする。
+    """
     def convertToStockStats(self):
         statusListGraph = []
         statDateTimeList = self._stockStats.keys()
@@ -180,6 +193,9 @@ class KabuComMainController():
         return stock
 
 
+    """
+        stockstatsフォーマットのデータを受け取ってグラフを描画する。
+    """
     def makeGraph(self, stockStats):
 
         # plot graph
@@ -203,9 +219,11 @@ class KabuComMainController():
 
         plt.show()
 
+
     def _writeStockTick(self):
         df = pd.DataFrame(self._stockTicks)
         df.to_csv(self._stockTickPath)
+
 
     def readStockTick(self):
         df = pd.read_csv(self._stockTickPath)
@@ -241,19 +259,21 @@ if __name__ == '__main__':
     kabucom = KabuComMainController(STOCK, USER, PASSWORD)
 
     # kabucomにアクセスしてデータを取得
-    # try:
-    #     kabucom.login()
-    #     kabucom.update(isTest=False)
-    #     print("listing Stock done!")
-    #     kabucom.close()
-    # except TimeoutException as ex:
-    #     kabucom.close()
-    #     print("Loading took too much time! " + str(ex))
+    try:
+        kabucom.login()
+        kabucom.update(isTest=False)
+        print("listing Stock done!")
+    except TimeoutException as ex:
+        print("Loading took too much time! " + str(ex))
 
     #セーブしたcsvデータを読み込んでテクニカル指標を算出
-    kabucom.readStockTick()
-    stockStats = kabucom.convertToStockStats()
-    kabucom.makeGraph(stockStats)
+    # kabucom.readStockTick()
+    # stockStats = kabucom.convertToStockStats()
+    # stockStats.get("macd")
+    # allMacd = stockStats.as_matrix(columns=['macd'])
+    # print(allMacd)
+    # print(allMacd[-1])
+    # kabucom.makeGraph(stockStats)
 
     kabucom.close()
 

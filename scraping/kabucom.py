@@ -10,6 +10,12 @@ import numpy as np
 import datetime
 
 import csv
+import pandas as pd
+
+import matplotlib.pyplot as plt
+from matplotlib.finance import candlestick2_ohlc
+
+import stockstats as stss
 
 
 class KabuComMainController():
@@ -25,6 +31,7 @@ class KabuComMainController():
 
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d")
         self._stockTickPath = "./stockTick_" + str(crntDateTime) + ".csv"
+        self._stockStatusPath = "./stockStatus_" + str(crntDateTime) + ".csv"
 
         # datetime, open, high, low, close, volume of 1 min. dict.
         self._stockStats = {}
@@ -64,14 +71,14 @@ class KabuComMainController():
 
             # qtbldというクラスを持つtdを見つける。
             # その中のtableのtdの4番目が株価
-            stockPrice = self._driver.find_element_by_xpath('//td[@class="qtbld"]/table/tbody/tr/td[4]').get_attribute('innerHTML')
+            stockPrice = self._driver.find_element_by_xpath('//*[@id="fullquotetbl"]/tbody/tr[3]/td/table/tbody/tr[1]/td[4]').get_attribute('innerHTML')
             stockPrice = str(stockPrice).replace(',', '')
-            print(stockPrice)
 
             #出来高取得
             volumePrice = self._driver.find_element_by_xpath('//*[@id="fullquotetbl"]/tbody/tr[4]/td/div/table/tbody/tr[4]/td[2]').get_attribute('innerHTML')
             volumePrice = str(volumePrice).replace(',', '')
-            print(volumePrice)
+
+            print("{}, {}".format(stockPrice,volumePrice))
 
             #更新ボタンが表示されるまで待つ
             updateImg = WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.XPATH, '//table[@id="fullquotetbl"]/tbody/tr[1]/td/div/table/tbody/tr[1]/td[10]/a/img')))
@@ -85,7 +92,7 @@ class KabuComMainController():
             self._stockTicks.append([nowDateTime, stockPrice, volumePrice])
 
             #アップデート
-            self._status()
+            self._statusUpdate()
 
             #出力
             self._writeStockTick()
@@ -95,8 +102,13 @@ class KabuComMainController():
             time.sleep(int(randWait))
 
             isValidTime += 1
-            if(isTest and isValidTime > 50):
+            if(isTest and isValidTime > 1000):
                 isValidTime = False
+
+            nowTime = datetime.datetime.now().strftime("%H%M")
+            if(isTest != False and (int(nowTime) > 1500)):
+                isValidTime = False
+
 
 
     def close(self):
@@ -107,44 +119,105 @@ class KabuComMainController():
     """
         各アップデートの値から1分事のopen、high, low, close, volumeを出す。
     """
-    def _status(self):
+    def _statusUpdate(self):
+        #まだ1つしかレコードがない場合は全部現在の値段
         if len(self._stockTicks) == 1:
             tick = self._stockTicks[0]
             crntPrice = tick[1]
             crntDateTimeStr = str(tick[0])[0:12]
             self._stockStats[crntDateTimeStr] = [crntPrice, crntPrice, crntPrice, crntPrice, crntPrice]
+
+            # close額設定の為保存しておく
+            self._prevTick = tick
             return
 
-        for i in range(len(self._stockTicks)-1):
-            tick = self._stockTicks[i]
-            #分までを取得
-            crntDateTimeStr = str(tick[0])[0:12]
-            crntPrice = tick[1]
+        #一番最後の株価を取得
+        tick = self._stockTicks[-1]
+        # 分までを取得
+        crntDateTimeStr = str(tick[0])[0:12]
+        crntPrice = tick[1]
 
-            #存在する場合値を更新
-            if crntDateTimeStr in self._stockStats:
-                crntHigh = self._stockStats[crntDateTimeStr][1]
-                crntLow = self._stockStats[crntDateTimeStr][2]
-                if crntPrice > crntHigh:
-                    self._stockStats[crntDateTimeStr][1] = crntHigh
+        #現在の時分キーが設定されてある場合、現在の株価と比較
+        if crntDateTimeStr in self._stockStats:
+            crntHigh = self._stockStats[crntDateTimeStr][1]
+            crntLow = self._stockStats[crntDateTimeStr][2]
+            if crntPrice > crntHigh:
+                self._stockStats[crntDateTimeStr][1] = crntPrice
 
-                if crntPrice < crntLow:
-                    self._stockStats[crntDateTimeStr][2] = crntLow
+            if crntPrice < crntLow:
+                self._stockStats[crntDateTimeStr][2] = crntPrice
 
-                self._stockStats[crntDateTimeStr][4] = tick[2]
-
+        # 現在時分のキーが設定されてない場合は新しい時分
+        else:
             #初めて追加
-            else:
-                self._stockStats[crntDateTimeStr] = [crntPrice, crntPrice, crntPrice, crntPrice, crntPrice]
+            self._stockStats[crntDateTimeStr] = [crntPrice, crntPrice, crntPrice, crntPrice, crntPrice]
 
-            if crntDateTimeStr != str(self._stockTicks[i+1][0])[0:12]:
-                self._stockStats[crntDateTimeStr][4] = crntPrice
+            #前時分キーのclose値をアプデ
+            if self._prevTick:
+                prevDateTimeStr = str(self._prevTick[0])[0:12]
+                prevClosePrice = self._prevTick[1]
+                self._stockStats[prevDateTimeStr][3] = prevClosePrice
+
+        #最終取引額追加
+        self._stockStats[crntDateTimeStr][4] = tick[2]
+
+        #close額設定の為保存しておく
+        self._prevTick = tick
+
+
+    def convertToStockStats(self):
+        statusListGraph = []
+        statDateTimeList = self._stockStats.keys()
+        for statDateTime in statDateTimeList:
+            status = self._stockStats[statDateTime]
+            statusListGraph.append([statDateTime,float(status[0]),float(status[1]),float(status[2]),float(status[3]),float(status[4])])
+
+
+        # 保存されたCSVを読み込んでstockstatsフォーマットにする
+        pandaDataFrame = pd.DataFrame(statusListGraph, columns=['date','open','high','low','close','volume'])
+        stock = stss.StockDataFrame().retype(pandaDataFrame)
+
+        return stock
+
+
+    def makeGraph(self, stockStats):
+
+        # plot graph
+        fig = plt.figure(figsize=(10, 5))
+        plt.title('Stock Graph', fontsize=10)
+        plt.xlabel('x', fontsize=10)
+        plt.xticks(fontsize=10)
+        plt.yticks(fontsize=10)
+
+        # グラフ用
+        graphData = np.array(stockStats.as_matrix(columns=['open', 'high', 'low', 'close']), dtype='float')
+
+        #一つ目
+        ax1 = fig.add_subplot(1,1,1)
+
+        open_ = graphData[:, 0]
+        high_ = graphData[:, 1]
+        low_ = graphData[:, 2]
+        close_ = graphData[:, 3]
+        candlestick2_ohlc(ax1, open_, high_, low_, close_, colorup="b", width=0.5, colordown="r")
+
+        plt.show()
 
     def _writeStockTick(self):
-        f = open(self._stockTickPath, 'w', newline='')
-        writer = csv.writer(f, lineterminator="\r\n")
-        writer.writerow(self._stockTicks)
-        f.close()
+        df = pd.DataFrame(self._stockTicks)
+        df.to_csv(self._stockTickPath)
+
+    def readStockTick(self):
+        df = pd.read_csv(self._stockTickPath)
+        tmpList = df.values.tolist()
+        for tick in tmpList:
+            tmpTick = tick[1:]
+            tmpTick[0] = int(tmpTick[0])
+            self._stockTicks.append(tmpTick)
+            self._statusUpdate()
+
+        # print(self._stockStats)
+
 
 def kabucom_nisa_buy(price, stock, delay=3):
     URL_BUY = "https://s20.si1.kabu.co.jp/ap/pc/Nisa/Stock/Buy/Input?symbol="+str(stock)+"&exchange=1"
@@ -162,17 +235,27 @@ if __name__ == '__main__':
     #日産
     STOCK = 7201
 
-    USER = ""
-    PASSWORD = ""
+    USER = "01126363"
+    PASSWORD = "yoho62978"
 
-    try:
-        kabucom = KabuComMainController(STOCK, USER, PASSWORD)
-        kabucom.login()
-        kabucom.update()
-        print("listing Stock done!")
-        kabucom.close()
-    except TimeoutException as ex:
-        print("Loading took too much time! " + str(ex))
+    kabucom = KabuComMainController(STOCK, USER, PASSWORD)
+
+    # kabucomにアクセスしてデータを取得
+    # try:
+    #     kabucom.login()
+    #     kabucom.update(isTest=False)
+    #     print("listing Stock done!")
+    #     kabucom.close()
+    # except TimeoutException as ex:
+    #     kabucom.close()
+    #     print("Loading took too much time! " + str(ex))
+
+    #セーブしたcsvデータを読み込んでテクニカル指標を算出
+    kabucom.readStockTick()
+    stockStats = kabucom.convertToStockStats()
+    kabucom.makeGraph(stockStats)
+
+    kabucom.close()
 
 
 

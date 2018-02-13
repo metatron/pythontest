@@ -96,8 +96,7 @@ class KabuComMainController():
             self._statusUpdate()
 
             #stockstatsにコンバート
-            stockstatClass = self.convertToStockStats()
-            stockstatClass.get("macd")
+            stockstatClass = self.convertToStockStats(paramlist=['macd'])
             allMacd = stockstatClass.as_matrix(columns=['macd'])
 
             print("price:{}, volume:{}, macd:{}".format(stockPrice,volumePrice,allMacd[-1]))
@@ -127,7 +126,11 @@ class KabuComMainController():
 
 
     """
-        各アップデートの値から1分事のopen、high, low, close, volumeを出す。
+        各アップデートの値から1分事のopen、high, low, close, volumeを出し、self._stockStatsに格納。
+        
+        self._stockStats[日時分][open, high, low, close, volume]
+        
+        になる。
     """
     def _statusUpdate(self):
         #まだ1つしかレコードがない場合は全部現在の値段
@@ -178,7 +181,7 @@ class KabuComMainController():
     """
         self._stockStatsからstockstatsフォーマットのデータにConvertする。
     """
-    def convertToStockStats(self):
+    def convertToStockStats(self, paramlist=[]):
         statusListGraph = []
         statDateTimeList = self._stockStats.keys()
         for statDateTime in statDateTimeList:
@@ -189,6 +192,10 @@ class KabuComMainController():
         # 保存されたCSVを読み込んでstockstatsフォーマットにする
         pandaDataFrame = pd.DataFrame(statusListGraph, columns=['date','open','high','low','close','volume'])
         stock = stss.StockDataFrame().retype(pandaDataFrame)
+
+        if len(paramlist) > 0:
+            for param in paramlist:
+                stock.get(param)
 
         return stock
 
@@ -233,6 +240,12 @@ class KabuComMainController():
             tmpTick[0] = int(tmpTick[0])
             self._stockTicks.append(tmpTick)
             self._statusUpdate()
+            stockstatClass = self.convertToStockStats(['rsi_6', 'macd'])
+            alldata = stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd', 'rsi_6'])
+            print(alldata[-1])
+            print()
+            time.sleep(1)
+
 
         # print(self._stockStats)
 
@@ -254,25 +267,21 @@ if __name__ == '__main__':
     STOCK = 7201
 
     USER = "01126363"
-    PASSWORD = "yoho62978"
+    PASSWORD = ""
 
     kabucom = KabuComMainController(STOCK, USER, PASSWORD)
 
     # kabucomにアクセスしてデータを取得
-    try:
-        kabucom.login()
-        kabucom.update(isTest=False)
-        print("listing Stock done!")
-    except TimeoutException as ex:
-        print("Loading took too much time! " + str(ex))
+    # try:
+    #     kabucom.login()
+    #     kabucom.update(isTest=False)
+    #     print("listing Stock done!")
+    # except TimeoutException as ex:
+    #     print("Loading took too much time! " + str(ex))
 
     #セーブしたcsvデータを読み込んでテクニカル指標を算出
-    # kabucom.readStockTick()
+    kabucom.readStockTick()
     # stockStats = kabucom.convertToStockStats()
-    # stockStats.get("macd")
-    # allMacd = stockStats.as_matrix(columns=['macd'])
-    # print(allMacd)
-    # print(allMacd[-1])
     # kabucom.makeGraph(stockStats)
 
     kabucom.close()

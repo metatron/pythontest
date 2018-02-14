@@ -32,14 +32,17 @@ class SignalFinder():
             npPriceList = np.array(priceList).reshape(len(priceList), 1)
             self._scaler.fit_transform(npPriceList)
 
+            date = self._stockTicks[-1][0]
+            price = self._stockTicks[-1][1]
+            macd1 = self._alldata[:, 5][-1]
+            macd2 = 0
+            macd3 = 0
+            rsi = 0
             if(len(self._alldata)>3):
-                date = self._stockTicks[-1][0]
-                price = self._stockTicks[-1][1]
-                macd1 = self._alldata[:, 5][-1]
                 macd2 = self._alldata[:, 5][-2]
                 macd3 = self._alldata[:, 5][-3]
                 rsi = self._alldata[:, 6][-1]
-                print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}".format(date, price, macd1, macd2, macd3, rsi))
+            print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}".format(date, price, macd1, macd2, macd3, rsi))
 
 
 

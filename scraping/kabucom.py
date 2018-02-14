@@ -105,7 +105,7 @@ class KabuComMainController():
             #_stockStatsアップデート
             self._statusUpdate()
 
-            print("date:{}, price:{}".format(nowDateTime,stockPrice))
+            # print("date:{}, price:{}".format(nowDateTime,stockPrice))
 
             # 売買のシグナルを見つける
             self._signalFinder.update()

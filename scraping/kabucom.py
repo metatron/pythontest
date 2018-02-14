@@ -6,35 +6,45 @@ from selenium.common.exceptions import TimeoutException
 import time
 from bs4 import BeautifulSoup
 import numpy as np
-
 import datetime
-
 import csv
 import pandas as pd
-
 import matplotlib.pyplot as plt
 from matplotlib.finance import candlestick2_ohlc
-
 import stockstats as stss
+import os
+import scraping
+
 
 
 class KabuComMainController():
-    def __init__(self, stock, user, password):
-        self._driver = webdriver.Chrome(executable_path="../webdriver/chromedriver")
+    def __init__(self, stock=None, user="", password=""):
+        self._driver = None
+        if(stock != ""):
+            self._driver = webdriver.Chrome(executable_path="../webdriver/chromedriver")
         self._delay = 3
         self._stock = stock
         self._user = user
         self._pass = password
 
+        #買った時の単価
+        self._stockBuyPrice = 0
+
+        #売った際の差額（1株辺り）
+        self._sellDiff = []
+
         # datetime, currentPrice, volume
         self._stockTicks = []
 
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d")
-        self._stockTickPath = "./stockTick_" + str(crntDateTime) + ".csv"
-        self._stockStatusPath = "./stockStatus_" + str(crntDateTime) + ".csv"
+        self._stockTickPath = "./stockTick_" + str(crntDateTime) + "_" + str(stock) + ".csv"
+        self._stockStatusPath = "./stockStatus_" + str(crntDateTime) + "_" + str(stock) + ".csv"
 
         # datetime, open, high, low, close, volume of 1 min. dict.
         self._stockStats = {}
+
+        #売買のシグナルを見つける
+        self._signalFinder = scraping.SignalFinder.SignalFinder(self)
 
 
     """
@@ -95,11 +105,12 @@ class KabuComMainController():
             #_stockStatsアップデート
             self._statusUpdate()
 
-            #stockstatsにコンバート
-            stockstatClass = self.convertToStockStats(paramlist=['macd'])
-            allMacd = stockstatClass.as_matrix(columns=['macd'])
+            print("date:{}, price:{}".format(nowDateTime,stockPrice))
 
-            print("price:{}, volume:{}, macd:{}".format(stockPrice,volumePrice,allMacd[-1]))
+            # 売買のシグナルを見つける
+            self._signalFinder.update()
+            self._signalFinder.buySignal()
+            self._signalFinder.sellSignal()
 
             #出力
             self._writeStockTick()
@@ -109,11 +120,11 @@ class KabuComMainController():
             time.sleep(int(randWait))
 
             isValidTime += 1
-            if(isTest and isValidTime > 1000):
+            if(isTest and isValidTime > 20):
                 isValidTime = False
 
             nowTime = datetime.datetime.now().strftime("%H%M")
-            if(isTest != False and (int(nowTime) > 1500)):
+            if(isTest == False and (int(nowTime) > 1500)):
                 isValidTime = False
 
 
@@ -224,7 +235,12 @@ class KabuComMainController():
         close_ = graphData[:, 3]
         candlestick2_ohlc(ax1, open_, high_, low_, close_, colorup="b", width=0.5, colordown="r")
 
-        plt.show()
+        if (os.path.exists("../figures") != True):
+            os.mkdir("../figures")
+
+        plt.savefig("../figures/candle.jpg", format="jpg", dpi=80)
+
+        # plt.show()
 
 
     def _writeStockTick(self):
@@ -240,21 +256,63 @@ class KabuComMainController():
             tmpTick[0] = int(tmpTick[0])
             self._stockTicks.append(tmpTick)
             self._statusUpdate()
-            stockstatClass = self.convertToStockStats(['rsi_6', 'macd'])
-            alldata = stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd', 'rsi_6'])
-            print(alldata[-1])
-            print()
-            time.sleep(1)
+
+            # 売買のシグナルを見つける
+            self._signalFinder.update()
+            self._signalFinder.buySignal()
+            self._signalFinder.sellSignal()
+
+            # stockstatClass = self.convertToStockStats(['rsi_6', 'macd'])
+            # alldata = stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd', 'rsi_6'])
+            # print(alldata[-1])
+            # print()
+            # time.sleep(1)
 
 
         # print(self._stockStats)
 
 
-def kabucom_nisa_buy(price, stock, delay=3):
-    URL_BUY = "https://s20.si1.kabu.co.jp/ap/pc/Nisa/Stock/Buy/Input?symbol="+str(stock)+"&exchange=1"
+    def nisa_buy(self, price, isTest=True):
+        URL_BUY = "https://s20.si1.kabu.co.jp/ap/pc/Nisa/Stock/Buy/Input?symbol="+str(self._stock)+"&exchange=1"
+        self._driver.get(URL_BUY)
 
-def kabucom_nisa_sell(price, stock, dealy=3):
-    URL_SELL = "https://s20.si1.kabu.co.jp/ap/PC/Nisa/Stock/Sell/Input?symbol="+str(stock)+"&exchange=TSE"
+        #確認ボタンが表示されるまで待つ（これを待てば後はだいたい表示されてるはず）
+        WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.XPATH, '/html/body/table[4]/tbody/tr[1]/td[1]/table/tbody/tr[2]/td/form/table[4]/tbody/tr/td[1]/table/tbody/tr[1]/td/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/input')))
+
+        #株数Text
+        self._driver.find_element_by_xpath('//*[@id="InputBuyModel_Quantity_Value"]').send_keys("100")
+
+        #単価Text
+        self._driver.find_element_by_xpath('//*[@id="InputBuyModel_Sashine_OrderPrice"]').send_keys(str(price))
+
+        self._stockBuyPrice = price
+
+        #確認画面へ繊維
+        self._driver.find_element_by_xpath('/html/body/table[4]/tbody/tr[1]/td[1]/table/tbody/tr[2]/td/form/table[4]/tbody/tr/td[1]/table/tbody/tr[1]/td/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/input').click()
+
+
+
+    def nisa_sell(self, price):
+        URL_SELL = "https://s20.si1.kabu.co.jp/ap/PC/Nisa/Stock/Sell/Input?symbol="+str(self._stock)+"&exchange=TSE"
+        self._driver.get(URL_SELL)
+
+        #確認ボタン表示までまつ
+        WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.XPATH, '/html/body/table[4]/tbody/tr[1]/td[1]/table/tbody/tr[2]/td/form/table[3]/tbody/tr/td[1]/table/tbody/tr/td/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/input')))
+
+        #株数Text
+        self._driver.find_element_by_xpath('//*[@id="InputModel_Quantity_Value"]').send_keys("100")
+
+        #指値チェックボックス
+        self._driver.find_element_by_xpath('//*[@id="InputModel_WebOrderType_Value_SASHINE"]').click()
+
+        #単価Text
+        self._driver.find_element_by_xpath('//*[@id="InputModel_Sashine_OrderPrice"]').send_keys(str(price))
+
+        self._sellDiff.append(price - self._stockBuyPrice)
+
+        #確認画面へ繊維
+        self._driver.find_element_by_xpath('/html/body/table[4]/tbody/tr[1]/td[1]/table/tbody/tr[2]/td/form/table[3]/tbody/tr/td[1]/table/tbody/tr/td/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/input').click()
+
 
 
 
@@ -266,23 +324,25 @@ if __name__ == '__main__':
     #日産
     STOCK = 7201
 
-    USER = "01126363"
+    USER = ""
     PASSWORD = ""
 
     kabucom = KabuComMainController(STOCK, USER, PASSWORD)
 
     # kabucomにアクセスしてデータを取得
-    # try:
-    #     kabucom.login()
-    #     kabucom.update(isTest=False)
-    #     print("listing Stock done!")
-    # except TimeoutException as ex:
-    #     print("Loading took too much time! " + str(ex))
+    try:
+        kabucom.login()
+        kabucom.update(isTest=False)
+        print("listing Stock done!")
+    except TimeoutException as ex:
+        print("Loading took too much time! " + str(ex))
 
     #セーブしたcsvデータを読み込んでテクニカル指標を算出
-    kabucom.readStockTick()
-    # stockStats = kabucom.convertToStockStats()
-    # kabucom.makeGraph(stockStats)
+    # kabucom.readStockTick()
+
+    #buy処理
+    # kabucom.login()
+    # kabucom.nisa_sell(300)
 
     kabucom.close()
 

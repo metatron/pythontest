@@ -225,12 +225,20 @@ class KabuComMainController():
         # plot graph
         fig = plt.figure(figsize=(10, 5))
         plt.title('Stock Graph', fontsize=10)
-        plt.xlabel('x', fontsize=10)
-        plt.xticks(fontsize=10)
-        plt.yticks(fontsize=10)
+        # plt.xlabel('x', fontsize=10)
+        # plt.xticks(fontsize=10)
+        # plt.yticks(fontsize=10)
 
         # グラフ用
-        graphData = np.array(stockStats.as_matrix(columns=['open', 'high', 'low', 'close']), dtype='float')
+        stockStats.get("macd")
+        graphData = np.array(stockStats.as_matrix(columns=['open', 'high', 'low', 'close', 'macd']), dtype='float')
+
+        timetickList = []
+        #x軸プロット
+        for timetick in self._stockStats.keys():
+            timetickList.append(int(timetick))
+
+        print(timetickList[::10])
 
         #一つ目
         ax1 = fig.add_subplot(1,1,1)
@@ -240,6 +248,16 @@ class KabuComMainController():
         low_ = graphData[:, 2]
         close_ = graphData[:, 3]
         candlestick2_ohlc(ax1, open_, high_, low_, close_, colorup="b", width=0.5, colordown="r")
+
+        ax1.xaxis.set_ticks(timetickList[::10])
+        plt.setp(ax1.get_xticklabels(), visible=True, rotation=30, ha='right')
+
+
+        # 2つ目
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('macd')
+        macd_ = graphData[:, 4]
+        p3, = ax2.plot(macd_, label=r'macd', color='orange')
 
         if (os.path.exists("../figures") != True):
             os.mkdir("../figures")

@@ -63,7 +63,11 @@ class SignalFinder():
             macdAll[-1] > 0 and  macdAll[-1] < 0.2 and
             #macdが上昇してきている(過去3番目、2番目と上がり調子）
             macdAll[-2] < macdAll[-1] and
-            macdAll[-3] < macdAll[-2]
+            macdAll[-3] < macdAll[-2] and
+            #rsiが100の時は避ける
+            rsiAll[-1] < 100.0 and
+            #高値の時は買わない
+            scaledPrice < 0.8
         ):
 
             #売ったことがある場合値段チェック。
@@ -86,9 +90,9 @@ class SignalFinder():
         crntPrice = self._stockTicks[-1][1]
         scaledPrice = self._scaler.transform(crntPrice)[0][0]
         if(
-            self._buyNum > 0 and
+            self._buyNum > 0.0 and
             #3円以上値上がりしてること（手数料があるため）
-            crntPrice > self._buyPrice + 3 and
+            float(crntPrice) > float(self._buyPrice) + 3.0 and
             #macdが上がってる時
             macdAll[-1] > 0.7
         ):

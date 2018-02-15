@@ -115,17 +115,23 @@ class KabuComMainController():
             #出力
             self._writeStockTick()
 
-            # 数秒待つ
-            randWait = np.random.randint(3,6, dtype="int")
-            time.sleep(int(randWait))
+            nowTime = datetime.datetime.now().strftime("%H%M")
+
+            # 取引時間外の場合は30分おきチェック
+            if (isTest == False and (int(nowTime) > 1130 and int(nowTime) < 1230)):
+                time.sleep(60*30)
+            # 取引中は数秒待つ
+            else:
+                randWait = np.random.randint(3, 6, dtype="int")
+                time.sleep(int(randWait))
 
             isValidTime += 1
             if(isTest and isValidTime > 20):
                 isValidTime = False
 
-            nowTime = datetime.datetime.now().strftime("%H%M")
             if(isTest == False and (int(nowTime) > 1500)):
                 isValidTime = False
+
 
 
     """

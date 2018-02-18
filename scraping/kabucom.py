@@ -10,6 +10,7 @@ import datetime
 import csv
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from matplotlib.finance import candlestick2_ohlc
 import stockstats as stss
 import os
@@ -221,6 +222,7 @@ class KabuComMainController():
         stockstatsフォーマットのデータを受け取ってグラフを描画する。
     """
     def makeGraph(self, stockStats):
+        plt.close()
 
         # plot graph
         fig = plt.figure(figsize=(10, 5))
@@ -231,17 +233,23 @@ class KabuComMainController():
 
         # グラフ用
         stockStats.get("macd")
-        graphData = np.array(stockStats.as_matrix(columns=['open', 'high', 'low', 'close', 'macd']), dtype='float')
+        stockStats.get("boll")
+        stockStats.get("boll_ub")
+        stockStats.get("boll_lb")
+        graphData = np.array(stockStats.as_matrix(columns=['open', 'high', 'low', 'close', 'macd', 'boll', 'boll_ub', 'boll_lb']), dtype='float')
 
         timetickList = []
-        #x軸プロット
+        #x軸プロット(時間のみ[8:12]）
         for timetick in self._stockStats.keys():
-            timetickList.append(int(timetick))
-
-        print(timetickList[::10])
+            timetickList.append(int(timetick[8:12]))
 
         #一つ目
         ax1 = fig.add_subplot(1,1,1)
+
+        #x軸のラベル
+        step=10
+        plt.xticks([i for i in range(0, len(timetickList), step)], timetickList[::step])
+        plt.xticks(rotation=25)
 
         open_ = graphData[:, 0]
         high_ = graphData[:, 1]
@@ -249,8 +257,13 @@ class KabuComMainController():
         close_ = graphData[:, 3]
         candlestick2_ohlc(ax1, open_, high_, low_, close_, colorup="b", width=0.5, colordown="r")
 
-        ax1.xaxis.set_ticks(timetickList[::10])
-        plt.setp(ax1.get_xticklabels(), visible=True, rotation=30, ha='right')
+        boll_ = graphData[:, 5]
+        boll_ub_ = graphData[:, 6]
+        boll_lb_ = graphData[:, 7]
+        ax1.plot(boll_, color='gray')
+        ax1.plot(boll_ub_, color='red')
+        ax1.plot(boll_lb_, color='blue')
+
 
 
         # 2つ目
@@ -262,9 +275,9 @@ class KabuComMainController():
         if (os.path.exists("../figures") != True):
             os.mkdir("../figures")
 
-        plt.savefig("../figures/candle.jpg", format="jpg", dpi=80)
+        # plt.savefig("../figures/candle.jpg", format="jpg", dpi=120)
 
-        # plt.show()
+        # plt.pause(0.05)
 
 
     def _writeStockTick(self):

@@ -29,14 +29,20 @@ class MyEnv(gym.Env):
         tf.set_random_seed(RAND_SEED)
 
         # 保存されたCSVを読み込んでstockstatsフォーマットにする
-        kabucom = scraping.kabucom.KabuComMainController()
-        self._signalFinder = scraping.SignalFinder.SignalFinder(kabucom)
+        self._kabucom = scraping.kabucom.KabuComMainController()
 
+        #でーたファイル読み込み
+        path = "stockTick_20180216_7201.csv"
+        df = pd.read_csv(path)
+        self._tickDataList = df.values.tolist()
+
+        self.totalStep = len(self._tickDataList)
 
         self.index = 0
-        self.totalStep = len(self._signalFinder._alldata)
 
         self.state = None
+
+        self._alldata = []
 
         self._seed()
         self.viewer = None
@@ -47,7 +53,7 @@ class MyEnv(gym.Env):
 
         #0: 買う、1:ステイ、2:売る
         self.action_space = spaces.Discrete(3)
-        self.observation_space= spaces.Box(self.min_values, self.max_values)
+        self.observation_space= spaces.Box(low=np.zeros(5), high=np.array([2000.0,2000.0,2000.0,2000.0,1.0]), shape=np.array(['open', 'high', 'low', 'close', 'macd']).shape)
 
         self.actHistory = []
 
@@ -69,9 +75,17 @@ class MyEnv(gym.Env):
     def _step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
 
-        todayObs = self.allDataNormalized[self.index]
-        self.state = todayObs
-        yesterDayObj = self.allDataNormalized[self.index-1]
+        crntTick = self._tickDataList[self.index]
+        tmpTick = crntTick[1:]
+        tmpTick[0] = int(tmpTick[0])
+        #上記で実際のtickデータと同じにコンバート
+        #下記でコントローラにストックしている状態にする
+        self._kabucom._stockTicks.append(tmpTick)
+        self._kabucom._statusUpdate()
+        stockstatClass = self._kabucom.convertToStockStats(['macd'])
+        self._alldata = stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd'])
+
+        self.state = self._alldata[-1]
 
         #株価が上がった
         if(todayObs[0] - yesterDayObj[3] > 0):

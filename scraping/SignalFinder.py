@@ -73,8 +73,8 @@ class SignalFinder():
                 macd3 = self._alldata[:, PARAM_MACD][-3]
                 rsi = self._alldata[:, PARAM_RSI][TICK_NEWEST]
                 boll_ub = self._alldata[:, PARAM_BOLL_LB][-1]
-            # print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}".format(date, price, macd1, macd2, macd3, rsi, boll_ub))
-            print("date:{}, price:{}, macd-1:{}, rsi:{}, boll_ub:{}".format(date, price, macd1, rsi, boll_ub))
+            print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}, boll_ub:{}".format(date, price, macd1, macd2, macd3, rsi, boll_ub))
+            # print("date:{}, price:{}, macd-1:{}, rsi:{}, boll_ub:{}".format(date, price, macd1, rsi, boll_ub))
 
 
 

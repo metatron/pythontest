@@ -367,8 +367,8 @@ if __name__ == '__main__':
     #日産
     STOCK = 7201
 
-    USER = "01126363"
-    PASSWORD = "yoho62978112233"
+    USER = ""
+    PASSWORD = ""
 
     kabucom = KabuComMainController(STOCK, USER, PASSWORD)
 

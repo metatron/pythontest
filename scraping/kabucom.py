@@ -222,7 +222,7 @@ class KabuComMainController():
         stockstatsフォーマットのデータを受け取ってグラフを描画する。
     """
     def makeGraph(self, stockStats):
-        plt.close()
+        # plt.close()
 
         # plot graph
         fig = plt.figure(figsize=(10, 5))
@@ -233,10 +233,12 @@ class KabuComMainController():
 
         # グラフ用
         stockStats.get("macd")
+        stockStats.get("macds")
+        stockStats.get("macdh")
         stockStats.get("boll")
         stockStats.get("boll_ub")
         stockStats.get("boll_lb")
-        graphData = np.array(stockStats.as_matrix(columns=['open', 'high', 'low', 'close', 'macd', 'boll', 'boll_ub', 'boll_lb']), dtype='float')
+        graphData = np.array(stockStats.as_matrix(columns=['open', 'high', 'low', 'close', 'macd', 'macds', 'macdh', 'boll', 'boll_ub', 'boll_lb']), dtype='float')
 
         timetickList = []
         #x軸プロット(時間のみ[8:12]）
@@ -257,12 +259,12 @@ class KabuComMainController():
         close_ = graphData[:, 3]
         candlestick2_ohlc(ax1, open_, high_, low_, close_, colorup="b", width=0.5, colordown="r")
 
-        boll_ = graphData[:, 5]
-        boll_ub_ = graphData[:, 6]
-        boll_lb_ = graphData[:, 7]
-        ax1.plot(boll_, color='gray')
-        ax1.plot(boll_ub_, color='red')
-        ax1.plot(boll_lb_, color='blue')
+        boll_ = graphData[:, 7]
+        boll_ub_ = graphData[:, 8]
+        boll_lb_ = graphData[:, 9]
+        ax1.plot(boll_, color='gray', linestyle='dashed')
+        ax1.plot(boll_ub_, color='red', linestyle='dashed')
+        ax1.plot(boll_lb_, color='blue', linestyle='dashed')
 
 
 
@@ -270,12 +272,16 @@ class KabuComMainController():
         ax2 = ax1.twinx()
         ax2.set_ylabel('macd')
         macd_ = graphData[:, 4]
+        macds_ = graphData[:, 5]
+        macdh_ = graphData[:, 6]
         p3, = ax2.plot(macd_, label=r'macd', color='orange')
+        p3, = ax2.plot(macds_, label=r'macd', color='yellow')
+        p3, = ax2.plot(macdh_, label=r'macd', color='grey')
 
         if (os.path.exists("../figures") != True):
             os.mkdir("../figures")
 
-        # plt.savefig("../figures/candle.jpg", format="jpg", dpi=120)
+        plt.savefig("../figures/candle.jpg", format="jpg", dpi=120)
 
         # plt.pause(0.05)
 
@@ -361,8 +367,8 @@ if __name__ == '__main__':
     #日産
     STOCK = 7201
 
-    USER = ""
-    PASSWORD = ""
+    USER = "01126363"
+    PASSWORD = "yoho62978112233"
 
     kabucom = KabuComMainController(STOCK, USER, PASSWORD)
 

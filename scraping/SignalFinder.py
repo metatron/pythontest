@@ -2,6 +2,8 @@ import pandas as pd
 import time
 import numpy as np
 import scraping
+import math
+
 
 from sklearn.preprocessing import MinMaxScaler
 
@@ -65,11 +67,14 @@ class SignalFinder():
             macd2 = 0
             macd3 = 0
             rsi = 0
+            boll_ub = 0
             if(len(self._alldata)>3):
                 macd2 = self._alldata[:, PARAM_MACD][-2]
                 macd3 = self._alldata[:, PARAM_MACD][-3]
                 rsi = self._alldata[:, PARAM_RSI][TICK_NEWEST]
-            print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}".format(date, price, macd1, macd2, macd3, rsi))
+                boll_ub = self._alldata[:, PARAM_BOLL_LB][-1]
+            # print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}".format(date, price, macd1, macd2, macd3, rsi, boll_ub))
+            print("date:{}, price:{}, macd-1:{}, rsi:{}, boll_ub:{}".format(date, price, macd1, rsi, boll_ub))
 
 
 
@@ -98,7 +103,7 @@ class SignalFinder():
                 return False
 
             self._buyNum += 1
-            self._buyPrice = crntPrice
+            self._buyPrice = self._bollLBXPrice
             print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._stockTicks[TICK_NEWEST][0], self._buyPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
             return True
 
@@ -128,6 +133,7 @@ class SignalFinder():
 
 
     def _buyLogic_Boll(self):
+        macdAll = self._alldata[:, PARAM_MACD]
         bollAll = self._alldata[:, PARAM_BOLL]
         bollUbAll = self._alldata[:, PARAM_BOLL_UB]
         bollLbAll = self._alldata[:, PARAM_BOLL_LB]
@@ -137,7 +143,12 @@ class SignalFinder():
             #ボリンジャーLBを下回った事がある。
             self._hasLowerBollLb and
             #今は上回っている
-            self.isAboveLowBoll()
+            self.isAboveLowBoll() and
+
+            # プラ転してきている
+            # macdが上昇してきている(過去3番目、2番目と上がり調子）
+            macdAll[-2] < macdAll[TICK_NEWEST] and
+            macdAll[-3] < macdAll[-2]
         ):
             return True
 
@@ -169,7 +180,18 @@ class SignalFinder():
         ロウソクの下ヒゲが当たったらON
     """
     def isCrossingLowBolling(self):
-        if(self._alldata[:, PARAM_LOW][TICK_NEWEST] < self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST]):
+        if(
+            #ちゃんと値が入っていること
+            math.isnan(self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST]) == False and
+            #ボリンジャーLB価格で比較
+            self._alldata[:, PARAM_LOW][TICK_NEWEST] < self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST] and
+
+            #rsiに値が入っていること
+            math.isnan(self._alldata[:, PARAM_RSI][TICK_NEWEST]) == False and
+            self._alldata[:, PARAM_RSI][TICK_NEWEST] > 0.0 and
+            self._alldata[:, PARAM_RSI][TICK_NEWEST] < 20.5
+        ):
+            print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self._stockTicks[TICK_NEWEST][0], self._alldata[:, PARAM_LOW][TICK_NEWEST], self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST]))
             self._bollLBXPrice = self._alldata[:, PARAM_LOW][TICK_NEWEST]
             self._possibleSellPrice = self._bollLBXPrice + 3
             self._hasLowerBollLb = True
@@ -225,7 +247,7 @@ if __name__ == '__main__':
         # time.sleep(0.1)
 
 
-    # kabucom.makeGraph(kabucom.convertToStockStats())
+    kabucom.makeGraph(kabucom.convertToStockStats())
     kabucom.close()
 
 

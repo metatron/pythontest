@@ -47,6 +47,12 @@ class KabuComMainController():
         #売買のシグナルを見つける
         self._signalFinder = scraping.SignalFinder.SignalFinder(self)
 
+        #手数料
+        #10万以下
+        self._fee10 = 90
+        #20万以下
+        self._fee20 = 180
+
 
     """
         カブ.comにログインする。
@@ -79,7 +85,16 @@ class KabuComMainController():
         isValidTime = True
         while(isValidTime):
             # chart1が表示されるまで待つ
-            chartImg = WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.ID, 'chart1')))
+            # よく見つからないエラーがでる。出たらログインし直し。
+            try:
+                chartImg = WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.ID, 'chart1')))
+            except Exception as ex:
+                print("Error trying to login again... " + str(ex))
+                self.close()
+                # 年のため5秒スリープ
+                time.sleep(5)
+                self.login()
+                return
 
             # qtbldというクラスを持つtdを見つける。
             # その中のtableのtdの4番目が株価
@@ -356,6 +371,17 @@ class KabuComMainController():
         #確認画面へ繊維
         self._driver.find_element_by_xpath('/html/body/table[4]/tbody/tr[1]/td[1]/table/tbody/tr[2]/td/form/table[3]/tbody/tr/td[1]/table/tbody/tr/td/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/input').click()
 
+
+    """
+        手数料
+        1約定、1株1000.0以下:90 -> 売買に180
+        1約定、1株1000.0以上:180 -> 売買に360
+    """
+    def neededPrice(self, crntPrice):
+        if(crntPrice >= 1000.0):
+            return 4.0
+        elif(crntPrice < 1000.0):
+            return 2.0
 
 
 

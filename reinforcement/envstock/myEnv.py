@@ -53,7 +53,11 @@ class MyEnv(gym.Env):
 
         #0: 買う、1:ステイ、2:売る
         self.action_space = spaces.Discrete(3)
-        self.observation_space= spaces.Box(low=np.zeros(5), high=np.array([2000.0,2000.0,2000.0,2000.0,1.0]), shape=np.array(['open', 'high', 'low', 'close', 'macd']).shape)
+        self.observation_space= spaces.Box(
+            low=np.zeros(5),
+            high=np.array([2000.0,2000.0,2000.0,2000.0,1.0]),
+            shape=np.array(['open', 'high', 'low', 'close', 'macd']).shape
+        )
 
         self.actHistory = []
 
@@ -85,7 +89,7 @@ class MyEnv(gym.Env):
         stockstatClass = self._kabucom.convertToStockStats(['macd'])
         self._alldata = stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd'])
 
-        self.state = self._alldata[-1]
+        self.state = self._alldata
 
         #株価が上がった
         if(todayObs[0] - yesterDayObj[3] > 0):

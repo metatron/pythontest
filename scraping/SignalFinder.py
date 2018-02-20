@@ -14,10 +14,12 @@ PARAM_CLOSE = 3
 PARAM_VOLUME = 4
 
 PARAM_MACD = 5
-PARAM_RSI = 6
-PARAM_BOLL = 7
-PARAM_BOLL_UB = 8
-PARAM_BOLL_LB = 9
+PARAM_MACDS = 6
+PARAM_MACDH = 7
+PARAM_RSI = 8
+PARAM_BOLL = 9
+PARAM_BOLL_UB = 10
+PARAM_BOLL_LB = 11
 
 #配列の一番最後が一番最新
 TICK_NEWEST = -1
@@ -25,7 +27,7 @@ TICK_NEWEST = -1
 class SignalFinder():
     def __init__(self, kabucom):
         self._kabucom = kabucom
-        self._alldata = 0
+        self._alldata = []
         self._stockstatClass = None
 
         #買った際にincrement
@@ -47,8 +49,8 @@ class SignalFinder():
 
 
     def update(self):
-        self._stockstatClass = self._kabucom.convertToStockStats(['macd', 'rsi_9', 'boll', 'boll_ub', 'boll_lb'])
-        self._alldata = self._stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd', 'rsi_9', 'boll', 'boll_ub', 'boll_lb'])
+        self._stockstatClass = self._kabucom.convertToStockStats(['macd', 'macds', 'macdh', 'rsi_9', 'boll', 'boll_ub', 'boll_lb'])
+        self._alldata = self._stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd', 'macds', 'macdh', 'rsi_9', 'boll', 'boll_ub', 'boll_lb'])
         if len(self._alldata) > 0:
             # datetime price volume
             self._stockTicks = self._kabucom._stockTicks
@@ -66,14 +68,23 @@ class SignalFinder():
             macd1 = self._alldata[:, PARAM_MACD][TICK_NEWEST]
             macd2 = 0
             macd3 = 0
+            macds = 0
+            macdh = 0
             rsi = 0
-            boll_ub = 0
+            boll = 0
+            boll_lb = 0
             if(len(self._alldata)>3):
                 macd2 = self._alldata[:, PARAM_MACD][-2]
                 macd3 = self._alldata[:, PARAM_MACD][-3]
+                macds = self._alldata[:, PARAM_MACDS][TICK_NEWEST]
+                macdh = self._alldata[:, PARAM_MACDH][TICK_NEWEST]
                 rsi = self._alldata[:, PARAM_RSI][TICK_NEWEST]
-                boll_ub = self._alldata[:, PARAM_BOLL_LB][-1]
-            print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}, boll_ub:{}".format(date, price, macd1, macd2, macd3, rsi, boll_ub))
+                boll = self._alldata[:, PARAM_BOLL][TICK_NEWEST]
+                boll_lb = self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST]
+
+            pos = self._scaler.transform(price)
+            print("date:{}, price:{}, pos:{}, macd:{}, macds:{}, boll:{}, boll_lb:{}, rsi: {}".format(date, price, pos, macd1, macds, boll, boll_lb, rsi))
+            # print("date:{}, price:{}, macd-1:{}, macd-2:{}, macd-3:{}, rsi:{}, boll_ub:{}".format(date, price, macd1, macd2, macd3, rsi, boll_ub))
             # print("date:{}, price:{}, macd-1:{}, rsi:{}, boll_ub:{}".format(date, price, macd1, rsi, boll_ub))
 
 
@@ -94,6 +105,8 @@ class SignalFinder():
 
             #macd, rsiを使用
             # self._buyLogic_MACD()
+
+            #ボリンジャーを用いた売りロジック
             self._buyLogic_Boll()
         ):
 
@@ -103,7 +116,10 @@ class SignalFinder():
                 return False
 
             self._buyNum += 1
-            self._buyPrice = self._bollLBXPrice
+            if(crntPrice > self._bollLBXPrice):
+                self._buyPrice = self._bollLBXPrice
+            else:
+                self._buyPrice = crntPrice
             print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._stockTicks[TICK_NEWEST][0], self._buyPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
             return True
 
@@ -138,17 +154,26 @@ class SignalFinder():
         bollUbAll = self._alldata[:, PARAM_BOLL_UB]
         bollLbAll = self._alldata[:, PARAM_BOLL_LB]
         scaledPrice = self._scaler.transform(self._stockTicks[TICK_NEWEST][1])[0][0]
-
+        print("_buyLogic_Boll: {}, {}, {}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.willGoldenX()))
         if(
+            #ボリンジャーLBが存在する
+            math.isnan(bollLbAll[TICK_NEWEST]) == False and
+            bollLbAll[TICK_NEWEST] > 0.0 and
             #ボリンジャーLBを下回った事がある。
             self._hasLowerBollLb and
             #今は上回っている
             self.isAboveLowBoll() and
 
-            # プラ転してきている
-            # macdが上昇してきている(過去3番目、2番目と上がり調子）
-            macdAll[-2] < macdAll[TICK_NEWEST] and
-            macdAll[-3] < macdAll[-2]
+            #ゴールデンクロスになる予兆
+            self.willGoldenX() and
+
+            # rsiに値が入っていること
+            math.isnan(self._alldata[:, PARAM_RSI][TICK_NEWEST]) == False and
+            self._alldata[:, PARAM_RSI][TICK_NEWEST] < 60.0 and
+            # 高値の時は買わない
+            scaledPrice < 0.2 and
+            # 0に行くとさらに下がる可能性があるので
+            scaledPrice > 0.05
         ):
             return True
 
@@ -163,9 +188,13 @@ class SignalFinder():
         if(
             self._buyNum > 0.0 and
             #3円以上値上がりしてること（手数料があるため）
-            float(crntPrice) > float(self._buyPrice) + 3.0 and
+            float(crntPrice) > float(self._buyPrice) and#+ self._kabucom.neededPrice(crntPrice) and
+
             #macdが上がってる時
-            macdAll[TICK_NEWEST] > 0.7
+            # self._sellLogic_MACD()
+
+            #ボリンジャー判断
+            self._sellLogic_Boll()
         ):
             self._buyNum -= 1
             self._sellPrice = crntPrice
@@ -175,21 +204,63 @@ class SignalFinder():
         return False
 
 
+    def _sellLogic_MACD(self):
+        macdAll = self._alldata[:, 5]
+        rsiAll = self._alldata[:, 6]
+
+        crntPrice = self._stockTicks[TICK_NEWEST][1]
+        scaledPrice = self._scaler.transform(crntPrice)[0][0]
+
+        if(
+            # macdが上がってる時
+            macdAll[TICK_NEWEST] > 0.7
+        ):
+            return True
+
+        return False
+
+
+    def _sellLogic_Boll(self):
+        macdAll = self._alldata[:, PARAM_MACD]
+        macdsAll = self._alldata[:, PARAM_MACDS]
+        macdhAll = self._alldata[:, PARAM_MACDH]
+
+        bollAll = self._alldata[:, PARAM_BOLL]
+        bollUbAll = self._alldata[:, PARAM_BOLL_UB]
+        bollLbAll = self._alldata[:, PARAM_BOLL_LB]
+        scaledPrice = self._scaler.transform(self._stockTicks[TICK_NEWEST][1])[0][0]
+
+        if(
+            # midより上になった
+            self.isCrossingMidBolling() and
+            #macdがsignalを上回った
+            macdAll[TICK_NEWEST] > macdsAll[TICK_NEWEST] and
+            #ゴールデンクロス
+            self.isGoldenXed() and
+            # 過去にあった中で比較的高額
+            scaledPrice > 0.7
+        ):
+            return True
+
+        return False
+
+
+
     """
         ボリンジャーバンドLBを下抜けたかどうかの判断
-        ロウソクの下ヒゲが当たったらON
+        ロウソクの下ヒゲが当たったら_hasLowerBollLbをON
     """
     def isCrossingLowBolling(self):
         if(
+            len(self._alldata) > 3 and
             #ちゃんと値が入っていること
             math.isnan(self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST]) == False and
+            self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST] > 0.0 and
             #ボリンジャーLB価格で比較
             self._alldata[:, PARAM_LOW][TICK_NEWEST] < self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST] and
+            #_hasLowerBollLbのフラグが立つのでRSIがセットされてない場合はスキップ
+            self._alldata[:, PARAM_LOW][TICK_NEWEST] > 0.0
 
-            #rsiに値が入っていること
-            math.isnan(self._alldata[:, PARAM_RSI][TICK_NEWEST]) == False and
-            self._alldata[:, PARAM_RSI][TICK_NEWEST] > 0.0 and
-            self._alldata[:, PARAM_RSI][TICK_NEWEST] < 20.5
         ):
             print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self._stockTicks[TICK_NEWEST][0], self._alldata[:, PARAM_LOW][TICK_NEWEST], self._alldata[:, PARAM_BOLL_LB][TICK_NEWEST]))
             self._bollLBXPrice = self._alldata[:, PARAM_LOW][TICK_NEWEST]
@@ -220,6 +291,31 @@ class SignalFinder():
     def isCrossingHighBolling(self):
         if(self._alldata[:, PARAM_HIGH][TICK_NEWEST] > self._alldata[:, PARAM_BOLL_UB][TICK_NEWEST]):
             return True
+        return False
+
+
+
+    def isGoldenXed(self):
+        if(self._alldata[:, PARAM_MACD][TICK_NEWEST] > self._alldata[:, PARAM_MACDS][TICK_NEWEST]):
+            return True
+        return False
+
+
+    """
+        ゴールデンクロス時にはもう遅い。
+        差が大きく開いたところを狙う。
+    """
+    def willGoldenX(self):
+        macdAll = self._alldata[:, PARAM_MACD]
+        macdsall = self._alldata[:, PARAM_MACDS]
+        macdDif1 = macdsall[TICK_NEWEST] - macdAll[TICK_NEWEST]
+        macdDif2 = macdsall[-2] - macdAll[-2]
+        macdDif3 = macdsall[-3] - macdAll[-3]
+
+        # print("macdDiff:{}, {}, {}".format(macdDif1, macdDif2, macdDif3))
+        if(macdDif1 > macdDif2 and macdDif2 > macdDif3):
+            return True
+
         return False
 
 

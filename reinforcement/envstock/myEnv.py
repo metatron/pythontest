@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 import scraping.kabucom
 import scraping.SignalFinder
 
+ACTION_BUY = 0
+ACTION_STAY = 1
+ACTION_SELL = 2
+
 class MyEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
@@ -63,11 +67,15 @@ class MyEnv(gym.Env):
 
         self.reward = 0
 
+        #買いの回数
+        self._boughtNum = 0
+
 
     def _reset(self):
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.index = 0
         self.reward = 0
+        self._boughtNum = 0
         return np.array(self.state)
 
 
@@ -90,6 +98,15 @@ class MyEnv(gym.Env):
         self._alldata = stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd'])
 
         self.state = self._alldata
+
+        #買う事ができる場合リワードは少なくする
+        if(self._boughtNum == 0):
+            self._boughtNum += 1
+            self.reward += 1
+
+        #売る場合
+
+
 
         #株価が上がった
         if(todayObs[0] - yesterDayObj[3] > 0):
@@ -120,7 +137,4 @@ class MyEnv(gym.Env):
         pass
 
 
-    def getState(self, index=0):
-        print(self.allData[index])
-        return self.allDataNormalized[index]
 

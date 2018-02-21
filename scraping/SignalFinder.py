@@ -324,7 +324,7 @@ if __name__ == '__main__':
     kabucom = scraping.kabucom.KabuComMainController()
     signalFinder = SignalFinder(kabucom)
 
-    path = "stockTick_20180216_7201.csv"
+    path = "./csv/stockTick_20180216_7201.csv"
     df = pd.read_csv(path)
     tmpList = df.values.tolist()
     for tick in tmpList:

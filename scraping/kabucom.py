@@ -38,8 +38,8 @@ class KabuComMainController():
         self._stockTicks = []
 
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
-        self._stockTickPath = "./stockTick_" + str(crntDateTime) + "_" + str(stock) + ".csv"
-        self._stockStatusPath = "./stockStatus_" + str(crntDateTime) + "_" + str(stock) + ".csv"
+        self._stockTickPath = "./csv/stockTick_" + str(crntDateTime) + "_" + str(stock) + ".csv"
+        self._stockStatusPath = "./csv/stockStatus_" + str(crntDateTime) + "_" + str(stock) + ".csv"
 
         # datetime, open, high, low, close, volume of 1 min. dict.
         self._stockStats = {}

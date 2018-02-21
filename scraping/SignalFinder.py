@@ -116,8 +116,8 @@ class SignalFinder():
                 return False
 
             self._buyNum += 1
-            if(crntPrice > self._bollLBXPrice):
-                self._buyPrice = self._bollLBXPrice
+            if(float(crntPrice) > float(self._bollLBXPrice)):
+                self._buyPrice = float(self._bollLBXPrice)
             else:
                 self._buyPrice = crntPrice
             print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._stockTicks[TICK_NEWEST][0], self._buyPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))

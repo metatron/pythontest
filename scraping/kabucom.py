@@ -37,7 +37,7 @@ class KabuComMainController():
         # datetime, currentPrice, volume
         self._stockTicks = []
 
-        crntDateTime = datetime.datetime.now().strftime("%Y%m%d")
+        crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
         self._stockTickPath = "./stockTick_" + str(crntDateTime) + "_" + str(stock) + ".csv"
         self._stockStatusPath = "./stockStatus_" + str(crntDateTime) + "_" + str(stock) + ".csv"
 
@@ -71,47 +71,62 @@ class KabuComMainController():
 
 
     """
-        カブ.comのメンバーページにて株価及び出来高を取得。
+        カブ.comのメンバーページに移動
     """
-    def update(self, isTest = True):
+    def switchToStockPage(self):
         URL_STOCK = "https://s20.si1.kabu.co.jp/Members/Tradetool/investment_info/?trid=600&trric=" + str(self._stock) + ".T"
-
         self._driver.get(URL_STOCK)
 
         # mainbodyの中のpagecontentにアクセス。
         self._driver.switch_to.frame("mainbody")
         self._driver.switch_to.frame("pagecontent")
 
+
+    """
+        メンバーページにて株価及び出来高を取得。
+    """
+    def update(self, isTest = True):
+        #メンバーページに移動
+        self.switchToStockPage()
+
         isValidTime = True
         while(isValidTime):
-            # chart1が表示されるまで待つ
+            # chart1が表示されるまで待つ（クリック、表示ができるまでまつ）
             # よく見つからないエラーがでる。出たらログインし直し。
             try:
-                chartImg = WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.ID, 'chart1')))
+                WebDriverWait(self._driver, self._delay).until(EC.presence_of_element_located((By.ID, 'chart1')))
+                WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.ID, 'chart1')))
             except Exception as ex:
                 print("Error trying to login again... " + str(ex))
                 self.close()
                 # 年のため5秒スリープ
                 time.sleep(5)
                 self.login()
+                self.switchToStockPage()
+                time.sleep(3)
                 return
 
             # qtbldというクラスを持つtdを見つける。
             # その中のtableのtdの4番目が株価
-            stockPrice = self._driver.find_element_by_xpath('//*[@id="fullquotetbl"]/tbody/tr[3]/td/table/tbody/tr[1]/td[4]').get_attribute('innerHTML')
+            stockpriceXpath = '//*[@id="fullquotetbl"]/tbody/tr[3]/td/table/tbody/tr[1]/td[4]'
+            stockpriceElem = WebDriverWait(self._driver, self._delay).until(EC.presence_of_element_located((By.XPATH, stockpriceXpath)))
+            stockPrice = stockpriceElem.get_attribute('innerHTML')
             stockPrice = str(stockPrice).replace(',', '')
 
             #出来高取得
-            volumePrice = self._driver.find_element_by_xpath('//*[@id="fullquotetbl"]/tbody/tr[4]/td/div/table/tbody/tr[4]/td[2]').get_attribute('innerHTML')
+            volumeElementXpath = '//*[@id="fullquotetbl"]/tbody/tr[4]/td/div/table/tbody/tr[4]/td[2]'
+            volumeElement = WebDriverWait(self._driver, self._delay).until(EC.presence_of_element_located((By.XPATH, volumeElementXpath)))
+            volumePrice = volumeElement.get_attribute('innerHTML')
             volumePrice = str(volumePrice).replace(',', '')
 
             # print("{}, {}".format(stockPrice,volumePrice))
 
             #更新ボタンが表示されるまで待つ
-            updateImg = WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.XPATH, '//table[@id="fullquotetbl"]/tbody/tr[1]/td/div/table/tbody/tr[1]/td[10]/a/img')))
+            updateImgXPath = '//table[@id="fullquotetbl"]/tbody/tr[1]/td/div/table/tbody/tr[1]/td[10]/a/img'
+            updateImg = WebDriverWait(self._driver, self._delay).until(EC.element_to_be_clickable((By.XPATH, updateImgXPath)))
 
             #更新処理
-            self._driver.find_element_by_xpath('//table[@id="fullquotetbl"]/tbody/tr[1]/td/div/table/tbody/tr[1]/td[10]/a/img').click()
+            updateImg.click()
 
             nowDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -131,10 +146,10 @@ class KabuComMainController():
             #出力
             self._writeStockTick()
 
-            nowTime = datetime.datetime.now().strftime("%H%M")
+            nowTime = datetime.datetime.now().strftime("%H%M%S")
 
             # 取引時間外の場合は30分おきチェック
-            if (isTest == False and (int(nowTime) > 1130 and int(nowTime) < 1230)):
+            if (isTest == False and (int(nowTime) > 113000 and int(nowTime) < 123000)):
                 time.sleep(60*30)
             # 取引中は数秒待つ
             else:
@@ -145,8 +160,10 @@ class KabuComMainController():
             if(isTest and isValidTime > 20):
                 isValidTime = False
 
-            if(isTest == False and (int(nowTime) > 1500)):
+            if(isTest == False and (int(nowTime) > 150000)):
                 isValidTime = False
+
+
 
 
 
@@ -154,8 +171,15 @@ class KabuComMainController():
         ブラウザ削除
     """
     def close(self):
-        self._driver.close()
-        self._driver.quit()
+        try:
+            self._driver.close()
+        except Exception as e:
+            print("Error on self._driver.close(): " + str(e))
+
+        try:
+            self._driver.quit()
+        except Exception as ex:
+            print("Error on self._driver.quit(): " + str(ex))
 
 
     """

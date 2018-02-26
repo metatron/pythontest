@@ -21,8 +21,6 @@ import scraping
 class KabuComMainController():
     def __init__(self, stock=None, user="", password=""):
         self._driver = None
-        if(stock != ""):
-            self._driver = webdriver.Chrome(executable_path="../webdriver/chromedriver")
         self._delay = 3
         self._stock = stock
         self._user = user
@@ -58,6 +56,9 @@ class KabuComMainController():
         カブ.comにログインする。
     """
     def login(self):
+        if(self._stock != None):
+            self._driver = webdriver.Chrome(executable_path="../webdriver/chromedriver")
+
         URL_LOGIN = "https://s10.kabu.co.jp/_mem_bin/members/login.asp?/members/"
 
         self._driver.get(URL_LOGIN)
@@ -416,6 +417,9 @@ if __name__ == '__main__':
 
     #日産
     STOCK = 7201
+
+    #東レ
+    STOCK = 3402
 
     USER = ""
     PASSWORD = ""

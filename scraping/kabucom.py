@@ -258,7 +258,7 @@ class KabuComMainController():
 
 
     """
-        stockstatsフォーマットのデータを受け取ってグラフを描画する。
+        stockstatsフォーマットのデータを受け取ってグラフを描画する。
     """
     def makeGraph(self, stockStats):
         # plt.close()

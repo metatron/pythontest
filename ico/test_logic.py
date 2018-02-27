@@ -33,9 +33,3 @@ if __name__ == '__main__':
     bitflyer.initGraph()
     bitflyer.makeGraph(bitflyer.convertToStockStats(), False)
 
-
-# https://qiita.com/hisatoshi/items/7354c76a4412dffc4fd7
-# http://st-hakky.hatenablog.com/entry/2018/01/26/214255
-# 各ファンクションの実行時間が欲しい。どれが遅い？ 20000件ストアできんのか？
-# Thread化。
-# makeGraphのリファクタリング

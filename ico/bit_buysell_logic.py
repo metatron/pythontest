@@ -106,11 +106,9 @@ class BitSignalFinder():
 
 
     def _buyLogic_Boll(self):
-        bollAll = self._stockstatClass.get('boll')
-        bollUbAll = self._stockstatClass.get('boll_ub')
         bollLbAll = self._stockstatClass.get('boll_lb')
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
-        print("_buyLogic_Boll: hasLB:{}, aboveLB:{}, willX:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.willGoldenX()))
+        print("_buyLogic_Boll: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.isGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
         if(
             #ボリンジャーLBが存在する
             math.isnan(bollLbAll[TICK_NEWEST]) == False and
@@ -120,12 +118,12 @@ class BitSignalFinder():
             #今は上回っている
             self.isAboveLowBoll() and
 
-            #ゴールデンクロスになる予兆
-            self.willGoldenX() and
+            #ゴールデンクロス
+            self.isGoldenXed() and
 
             # rsiに値が入っていること
-            math.isnan(self._stockstatClass[:, PARAM_RSI][TICK_NEWEST]) == False and
-            self._stockstatClass[:, PARAM_RSI][TICK_NEWEST] < 60.0 and
+            math.isnan(self._stockstatClass.get('rsi_9')[TICK_NEWEST]) == False and
+            self._stockstatClass.get('rsi_9')[TICK_NEWEST] < 60.0 and
             # 高値の時は買わない
             scaledPrice < 0.2 and
             # 0に行くとさらに下がる可能性があるので
@@ -146,11 +144,11 @@ class BitSignalFinder():
             self._stockstatClass.get('boll_lb')[TICK_NEWEST] > 0.0 and
             #ボリンジャーLB価格で比較
             self._stockstatClass.get('low')[TICK_NEWEST] < self._stockstatClass.get('boll_lb')[TICK_NEWEST] and
-            #_hasLowerBollLbのフラグが立つのでRSIがセットされてない場合はスキップ
+            #lowがちゃんとした値であること
             self._stockstatClass.get('low')[TICK_NEWEST] > 0.0
 
         ):
-            print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self._tickDataList[TICK_NEWEST][0], self._stockstatClass[:, PARAM_LOW][TICK_NEWEST], self._stockstatClass[:, PARAM_BOLL_LB][TICK_NEWEST]))
+            print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self._tickDataList[TICK_NEWEST][0], self._stockstatClass.get('low')[TICK_NEWEST], self._stockstatClass.get('boll_lb')[TICK_NEWEST]))
             self._bollLBXPrice = self._stockstatClass.get('low')[TICK_NEWEST]
             self._possibleSellPrice = self._bollLBXPrice + 3
             self._hasLowerBollLb = True
@@ -184,7 +182,18 @@ class BitSignalFinder():
 
 
     def isGoldenXed(self):
-        if(self._stockstatClass.get('macd')[TICK_NEWEST] > self._stockstatClass.get('macd')[TICK_NEWEST]):
+        allMacdH = self._stockstatClass.get('macdh')
+        allMacd = self._stockstatClass.get('macd')
+        print("1:{}, 2:{}, 3:{}".format((allMacdH[TICK_NEWEST] - allMacd[TICK_NEWEST]), (allMacdH[-2] - allMacd[-2]), (allMacdH[-3] - allMacd[-3])))
+        if (
+            len(allMacdH) > 2 and len(allMacd) > 2 and
+            # macdHの一番最新は確実に上回っている事
+            allMacdH[TICK_NEWEST] - allMacd[TICK_NEWEST] > 0 and
+            # 2番目は同額
+            allMacdH[-2] - allMacd[-2] == 0 and
+            # 3番目はMacdHが低い
+            allMacdH[-3] - allMacd[-3] < 0
+        ):
             return True
         return False
 

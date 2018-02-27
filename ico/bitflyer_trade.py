@@ -75,7 +75,6 @@ class BitFlyerController():
     """
         瞬間？の取引情報を取得
     """
-    @stop_watch
     def getTickData(self):
         path = "/v1/ticker"
         resultJson = self._getRequestData(path)
@@ -173,7 +172,6 @@ class BitFlyerController():
     """
         self._candleStatsからstockstatsフォーマットのデータにConvertする。
     """
-    @stop_watch
     def convertToStockStats(self):
         statusListGraph = []
         statDateTimeList = sorted(self._candleStats.keys())
@@ -210,7 +208,6 @@ class BitFlyerController():
     """
         stockstatsフォーマットのデータを受け取ってグラフを描画する。
     """
-    @stop_watch
     def makeGraph(self, stockstatsClass, display=True, params=[]):
         if len(self._candleStats) <= 0:
             return
@@ -291,7 +288,6 @@ class BitFlyerController():
     """
         ティックデータの保存
     """
-    @stop_watch
     def writeTickList(self):
         df = pd.DataFrame(self._tickList)
         df.to_csv(self._tickFilePath)
@@ -325,7 +321,7 @@ if __name__ == '__main__':
     while(index<10):
         bitflyer.getTickData()
         stockstatsClass = bitflyer.convertToStockStats()
-        print("count: " + str(len(bitflyer._tickList)))
+        print(bitflyer._tickList[-1])
         # bitsignal.update(bitflyer._tickList, stockstatsClass)
 
         bitflyer.makeGraph(stockstatsClass)

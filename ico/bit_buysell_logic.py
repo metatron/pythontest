@@ -31,11 +31,11 @@ class BitSignalFinder():
     def __init__(self, tickDataList, stockstatClass, params=[]):
 
         if len(params) == 0:
-            self._params = ['open', 'high', 'low', 'close', 'macd', 'macds', 'macdh', 'boll', 'boll_ub', 'boll_lb']
+            self._params = ['open', 'high', 'low', 'close', 'macd', 'macds', 'macdh', 'rsi_9', 'boll', 'boll_ub', 'boll_lb']
         else:
             self._params = params
 
-        self.update(tickDataList, stockstatClass)
+        self._scaler = MinMaxScaler(feature_range=(0, 1))
 
         # 買った際にincrement
         self._buyNum = 0
@@ -43,7 +43,6 @@ class BitSignalFinder():
 
         self._sellPrice = 0
 
-        self._scaler = MinMaxScaler(feature_range=(0, 1))
 
         # ボリンジャーバンドを下抜けた際の値段
         self._bollLBXPrice = 0
@@ -57,14 +56,22 @@ class BitSignalFinder():
         self._tickDataList = tickDataList
         self._stockstatClass = stockstatClass
 
-        if(len(self._params) > 0):
-            for param_ in self._params:
-                self._stockstatClass.get(param_)
+        # sclalerを使うためにめんどくさい処理をする。。
+        priceList = [self._tickDataList[i][1] for i in range(len(self._tickDataList))]
+        npPriceList = np.array(priceList).reshape(len(priceList), 1)
+        self._scaler.fit_transform(npPriceList)
+
+        #ボリンジャー下抜け調査
+        self.isCrossingLowBolling()
+
+        # if(len(self._params) > 0):
+        #     for param_ in self._params:
+        #         self._stockstatClass.get(param_)
 
 
     def buySignal(self):
-        macdAll = self._stockstatClass[:, PARAM_MACD]
-        rsiAll = self._stockstatClass[:, PARAM_RSI]
+        macdAll = self._stockstatClass.get('macd')
+        rsiAll = self._stockstatClass.get('rsi_9')
         # print(macdAll)
         # print()
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
@@ -99,9 +106,9 @@ class BitSignalFinder():
 
 
     def _buyLogic_Boll(self):
-        bollAll = self._stockstatClass[:, PARAM_BOLL]
-        bollUbAll = self._stockstatClass[:, PARAM_BOLL_UB]
-        bollLbAll = self._stockstatClass[:, PARAM_BOLL_LB]
+        bollAll = self._stockstatClass.get('boll')
+        bollUbAll = self._stockstatClass.get('boll_ub')
+        bollLbAll = self._stockstatClass.get('boll_lb')
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
         print("_buyLogic_Boll: hasLB:{}, aboveLB:{}, willX:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.willGoldenX()))
         if(
@@ -135,16 +142,16 @@ class BitSignalFinder():
         if(
             len(self._stockstatClass) > 3 and
             #ちゃんと値が入っていること
-            math.isnan(self._stockstatClass[:, PARAM_BOLL_LB][TICK_NEWEST]) == False and
-            self._stockstatClass[:, PARAM_BOLL_LB][TICK_NEWEST] > 0.0 and
+            math.isnan(self._stockstatClass.get('boll_lb')[TICK_NEWEST]) == False and
+            self._stockstatClass.get('boll_lb')[TICK_NEWEST] > 0.0 and
             #ボリンジャーLB価格で比較
-            self._stockstatClass[:, PARAM_LOW][TICK_NEWEST] < self._stockstatClass[:, PARAM_BOLL_LB][TICK_NEWEST] and
+            self._stockstatClass.get('low')[TICK_NEWEST] < self._stockstatClass.get('boll_lb')[TICK_NEWEST] and
             #_hasLowerBollLbのフラグが立つのでRSIがセットされてない場合はスキップ
-            self._stockstatClass[:, PARAM_LOW][TICK_NEWEST] > 0.0
+            self._stockstatClass.get('low')[TICK_NEWEST] > 0.0
 
         ):
             print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self._tickDataList[TICK_NEWEST][0], self._stockstatClass[:, PARAM_LOW][TICK_NEWEST], self._stockstatClass[:, PARAM_BOLL_LB][TICK_NEWEST]))
-            self._bollLBXPrice = self._stockstatClass[:, PARAM_LOW][TICK_NEWEST]
+            self._bollLBXPrice = self._stockstatClass.get('low')[TICK_NEWEST]
             self._possibleSellPrice = self._bollLBXPrice + 3
             self._hasLowerBollLb = True
             return True
@@ -156,7 +163,7 @@ class BitSignalFinder():
         ボリンジャーバンドLBの上になったかの判断
     """
     def isAboveLowBoll(self):
-        if(self._stockstatClass[:, PARAM_LOW][TICK_NEWEST] > self._stockstatClass[:, PARAM_BOLL_LB][TICK_NEWEST]):
+        if(self._stockstatClass.get('low')[TICK_NEWEST] > self._stockstatClass.get('boll_lb')[TICK_NEWEST]):
             return True
         return False
 
@@ -164,20 +171,20 @@ class BitSignalFinder():
 
 
     def isCrossingMidBolling(self):
-        if(self._stockstatClass[:, PARAM_LOW][TICK_NEWEST] > self._stockstatClass[:, PARAM_BOLL][TICK_NEWEST]):
+        if(self._stockstatClass.get('low')[TICK_NEWEST] > self._stockstatClass.get('boll')[TICK_NEWEST]):
             return True
         return False
 
 
     def isCrossingHighBolling(self):
-        if(self._stockstatClass[:, PARAM_HIGH][TICK_NEWEST] > self._stockstatClass[:, PARAM_BOLL_UB][TICK_NEWEST]):
+        if(self._stockstatClass.get('high')[TICK_NEWEST] > self._stockstatClass.get('boll_ub')[TICK_NEWEST]):
             return True
         return False
 
 
 
     def isGoldenXed(self):
-        if(self._stockstatClass[:, PARAM_MACD][TICK_NEWEST] > self._stockstatClass[:, PARAM_MACDS][TICK_NEWEST]):
+        if(self._stockstatClass.get('macd')[TICK_NEWEST] > self._stockstatClass.get('macd')[TICK_NEWEST]):
             return True
         return False
 
@@ -187,8 +194,8 @@ class BitSignalFinder():
         差が大きく開いたところを狙う。
     """
     def willGoldenX(self):
-        macdAll = self._stockstatClass[:, PARAM_MACD]
-        macdsall = self._stockstatClass[:, PARAM_MACDS]
+        macdAll = self._stockstatClass.get('macd')
+        macdsall = self._stockstatClass.get('macds')
         macdDif1 = macdsall[TICK_NEWEST] - macdAll[TICK_NEWEST]
         macdDif2 = macdsall[-2] - macdAll[-2]
         macdDif3 = macdsall[-3] - macdAll[-3]

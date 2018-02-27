@@ -16,6 +16,8 @@ import stockstats as stss
 import os
 import datetime
 
+from utils.stop_watch import stop_watch
+
 from ico.bit_buysell_logic import BitSignalFinder
 
 key = ""
@@ -37,8 +39,8 @@ CANDLE_POS_VOLUME = 4
 
 
 class BitFlyerController():
-    def __init__(self):
-        self._data = json.dumps({"product_code":"BTC_JPY"}).encode("utf-8")
+    def __init__(self, coin="BTC_JPY"):
+        self._data = json.dumps({"product_code":coin}).encode("utf-8")
         self._url = "https://api.bitflyer.jp"
 
         sign = hmac.new(b'key', secret.encode('utf-8'), hashlib.sha256).hexdigest()
@@ -49,6 +51,9 @@ class BitFlyerController():
             'ACCESEE-SIGN' : sign,
             'Content-Type' : 'application/json'
         }
+
+        crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
+        self._tickFilePath = "./csv/tick_" + str(crntDateTime) + "_" + coin + ".csv"
 
         # ティックリスト
         # [時分秒,値段],...
@@ -70,6 +75,7 @@ class BitFlyerController():
     """
         瞬間？の取引情報を取得
     """
+    @stop_watch
     def getTickData(self):
         path = "/v1/ticker"
         resultJson = self._getRequestData(path)
@@ -167,6 +173,7 @@ class BitFlyerController():
     """
         self._candleStatsからstockstatsフォーマットのデータにConvertする。
     """
+    @stop_watch
     def convertToStockStats(self):
         statusListGraph = []
         statDateTimeList = sorted(self._candleStats.keys())
@@ -203,7 +210,8 @@ class BitFlyerController():
     """
         stockstatsフォーマットのデータを受け取ってグラフを描画する。
     """
-    def makeGraph(self, stockstatsClass, params=[]):
+    @stop_watch
+    def makeGraph(self, stockstatsClass, display=True, params=[]):
         if len(self._candleStats) <= 0:
             return
 
@@ -270,12 +278,40 @@ class BitFlyerController():
             macdh_ = graphData[:, ind]
             p3, = self._ax2.plot(macdh_, label=r'macd', color='grey')
 
-        # if (os.path.exists("../figures") != True):
-        #     os.mkdir("../figures")
+        if display == False:
+            if (os.path.exists("../figures") != True):
+                os.mkdir("../figures")
 
-        # plt.savefig("../figures/candle.jpg", format="jpg", dpi=120)
+            plt.savefig("../figures/candle.jpg", format="jpg", dpi=120)
+        else:
+            plt.pause(0.05)
 
-        plt.pause(0.05)
+
+
+    """
+        ティックデータの保存
+    """
+    @stop_watch
+    def writeTickList(self):
+        df = pd.DataFrame(self._tickList)
+        df.to_csv(self._tickFilePath)
+
+
+    def readTickList(self):
+        df = pd.read_csv(self._tickFilePath)
+        tmpList = df.values.tolist()
+        for tick in tmpList:
+            tmpTick = tick[1:]
+            tmpTick[0] = int(tmpTick[0])
+            self._tickList.append(tmpTick)
+            self._convertTickDataToCandle(self._tickList)
+
+
+    def getBestPrice(self):
+        crntPrice = self._tickList[NEWEST_TICK_POS][TICK_POS_PRICE]
+        extraFee = crntPrice * 0.0001 * 2
+        sellPrice = crntPrice + extraFee
+
 
 
 
@@ -289,9 +325,11 @@ if __name__ == '__main__':
     while(index<10):
         bitflyer.getTickData()
         stockstatsClass = bitflyer.convertToStockStats()
-        print(bitflyer._tickList[-1])
-        bitsignal.update(bitflyer._tickList, stockstatsClass)
+        print("count: " + str(len(bitflyer._tickList)))
+        # bitsignal.update(bitflyer._tickList, stockstatsClass)
+
         bitflyer.makeGraph(stockstatsClass)
+        bitflyer.writeTickList()
 
         # index += 1
         randWait = np.random.randint(1, 3, dtype="int")

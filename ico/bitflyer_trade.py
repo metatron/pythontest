@@ -206,7 +206,7 @@ class BitFlyerController():
 
 
     """
-        stockstatsフォーマットのデータを受け取ってグラフを描画する。
+        stockstatsフォーマットのデータを受け取ってグラフを描画する。
     """
     def makeGraph(self, stockstatsClass, display=True, params=[]):
         if len(self._candleStats) <= 0:

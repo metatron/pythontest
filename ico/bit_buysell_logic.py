@@ -50,7 +50,7 @@ class BitSignalFinder():
         self._coinAmount = 0.001
 
         #最低利益額（売った時手数料をのぞいた最低利益額。円）
-        self._minEarn = 1.5
+        self._minEarn = 2.0
 
 
 
@@ -100,17 +100,15 @@ class BitSignalFinder():
             self._buyLogic_Boll()
         ):
 
-            #売ったことがある場合値段チェック。
-            #現在の株価がsellよりも低くないとだめ
-            if(self._sellPrice > 0 and crntPrice + 3 >= self._sellPrice):
-                return False
-
             self._buyNum += 1
             # 最安で買うか現時点での値段で買うか。。
             # if(float(crntPrice) > float(self._bollLBXPrice)):
             #     self._buyPrice = float(self._bollLBXPrice)
             # else:
             self._buyPrice = crntPrice
+
+            # 最低売り金額を算出
+            self._sellPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, self._minEarn)[0]
             print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._tickDataList[TICK_NEWEST][1], self._buyPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
             return True
 
@@ -156,9 +154,8 @@ class BitSignalFinder():
         scaledPrice = self._scaler.transform(crntPrice)[0][0]
         if(
             self._buyNum > 0.0 and
-            #3円以上値上がりしてること（手数料があるため）
-            float(crntPrice) > float(self._buyPrice)
-
+            #値上がりしてること
+            float(crntPrice) >= float(self._sellPrice)
         ):
             self._buyNum -= 1
             self._sellPrice = crntPrice
@@ -169,25 +166,46 @@ class BitSignalFinder():
 
 
 
-    def _getMinSellPrice(self):
-        #10万円以下手数料
-        extraFee = 0.0015
-        #実際に払った金額
-        actualBuyPrice = self._buyPrice * self._coinAmount
+    """
+    買った金額、個数から「利益額」を出す為に0.001コインあたりいくらでうればいいかを算出
+    :param minEarn 売らなければならないコインを全て売った時の利益額
 
-        #50万以下だったら0.14%
-        if(actualBuyPrice > 100000.0 and actualBuyPrice <= 500000.0):
+    return: [1コイン辺りの最低売り金額, 買いの時との差, 売らなければいけないコイン個数] 
+    """
+    def getMinSellPrice(self, buyPrice, coinAmount=0.001, minEarn=1.0):
+        minAmount = 0.001
+        buyPrice = float(buyPrice)
+        coinAmount = float(coinAmount)
+        minEarn = float(minEarn)
+
+        # 10万円以下手数料
+        extraFee = 0.0015
+        # 実際に払った金額
+        actualBuyPrice = buyPrice * coinAmount
+
+        # 50万以下だったら0.14%
+        if (actualBuyPrice > 100000.0 and actualBuyPrice <= 500000.0):
             extraFee = 0.0014
 
-        #手数料金額（買った時＋売った時の手数料になるが面倒なのでとりあえず2倍）
-        payingFee = actualBuyPrice * extraFee * 2
+        # 0.01あたりに直す
+        ratio = minAmount / coinAmount
 
-        #最低売り金額
-        actualSellPrice = actualBuyPrice + payingFee + self._minEarn
-        #1コインに置き換え
-        self._sellPrice = actualSellPrice/self._coinAmount
+        # 0.001あたりの手数料（x2。買い＆売り）
+        minExtraFee = actualBuyPrice * extraFee * ratio * 2
 
+        # 0.001あたりの金額
+        minActualBuyPrice = buyPrice * minAmount
 
+        # 0.001あたりの最低売り価格 (minEarn*ratioをする事で「全部売ればminEarnになる」)
+        possibleSellPrice = minActualBuyPrice + minExtraFee + (minEarn*ratio)
+
+        # 1コインに置き換える
+        coinSellPrice = possibleSellPrice / minAmount
+
+        # 1コインあたりのdiff
+        diffPrice = coinSellPrice - buyPrice
+
+        return [coinSellPrice, diffPrice, coinAmount]
 
 
 

@@ -2,34 +2,48 @@ import sys
 
 """
 コマンドライン上で打てるように実装。
-python3 get_minsellprice.py <<コインの値段>> <<コイン個数>> <<利益額>>
+python3 get_minsellprice.py <<コインの値段>> <<コイン個数>> <<0.001コイン辺りの利益額>>
+
+return: [1コイン辺りの最低売り金額, 買いの時との差, 売らなければいけないコイン個数] 
 """
 def getMinSellPrice(buyPrice, coinAmount=0.001, minEarn=1.0):
     minAmount = 0.001
+    buyPrice = float(buyPrice)
+    coinAmount = float(coinAmount)
+    minEarn = float(minEarn)
     
     #10万円以下手数料
     extraFee = 0.0015
-    #実際に払った金額
-    actualBuyPrice = float(buyPrice) * float(coinAmount)
+    #実際に払った金額
+    actualBuyPrice = buyPrice * coinAmount
 
     #50万以下だったら0.14%
     if(actualBuyPrice > 100000.0 and actualBuyPrice <= 500000.0):
         extraFee = 0.0014
 
-    #手数料金額（買った時＋売った時の手数料になるが面倒なのでとりあえず2倍）
-    payingFee = actualBuyPrice * extraFee * 2
+    # 0.01あたりに直す
+    ratio = minAmount / coinAmount
 
-    #実際に買った際の最低額(0.001コインの値段）
-    minBuyPrice = actualBuyPrice * minAmount/float(coinAmount)
+    # 0.001あたりの手数料（x2。買い＆売り）
+    minExtraFee = actualBuyPrice * extraFee * ratio * 2
 
-    actualSellPrice = minBuyPrice + payingFee + minEarn
-    #1コインに置き換え
-    sellPrice = actualSellPrice/minAmount
-    #diff
-    print("DIFFFFF: " + str(minBuyPrice))
-    diffprice = sellPrice - float(minBuyPrice)/minAmount
+    #0.001あたりの金額
+    minActualBuyPrice = buyPrice * minAmount
 
-    return [sellPrice, diffprice, coinAmount]
+    #0.001あたりの最低売り価格
+    possibleSellPrice = minActualBuyPrice + minExtraFee + (minEarn*ratio)
+
+    #1コインに置き換える
+    coinSellPrice = possibleSellPrice/minAmount
+
+    #1コインあたりのdiff
+    diffPrice = coinSellPrice - buyPrice
+
+    return [coinSellPrice, diffPrice, coinAmount]
+
+
+
+
 
 
 if __name__ == '__main__':
@@ -45,6 +59,6 @@ if __name__ == '__main__':
     #
     # sellprice = getMinSellPrice(float(buyPrice), float(coinAmount), float(minEarn))
 
-    sellprice = getMinSellPrice(1000000.0, 0.002, 1)
+    sellprice = getMinSellPrice(1000000.0, 0.001, 2.0)
     print(sellprice)
 

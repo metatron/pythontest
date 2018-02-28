@@ -24,6 +24,7 @@ if __name__ == '__main__':
         print(bitflyer._tickList[-1])
         bitsignal.update(bitflyer._tickList, stockstatsClass)
         bitsignal.buySignal()
+        bitsignal.sellSignal()
 
 
         # index += 1

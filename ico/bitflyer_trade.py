@@ -324,7 +324,7 @@ if __name__ == '__main__':
         print(bitflyer._tickList[-1])
         # bitsignal.update(bitflyer._tickList, stockstatsClass)
 
-        bitflyer.makeGraph(stockstatsClass)
+        # bitflyer.makeGraph(stockstatsClass)
         bitflyer.writeTickList()
 
         # index += 1

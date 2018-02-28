@@ -7,7 +7,7 @@ import stockstats
 
 
 from sklearn.preprocessing import MinMaxScaler
-
+from statistics import mean
 
 PARAM_OPEN = 0
 PARAM_HIGH = 1
@@ -39,9 +39,20 @@ class BitSignalFinder():
 
         # 買った際にincrement
         self._buyNum = 0
+
+        # 一番最後に買った時の値段
         self._buyPrice = 0
 
+        # 一番最後に売った時の値段
         self._sellPrice = 0
+
+        #コイン個数（ディフォルト0.001）
+        self._coinAmount = 0.001
+
+        #最低利益額（売った時手数料をのぞいた最低利益額。円）
+        self._minEarn = 1.5
+
+
 
 
         # ボリンジャーバンドを下抜けた際の値段
@@ -69,6 +80,7 @@ class BitSignalFinder():
         #         self._stockstatClass.get(param_)
 
 
+
     def buySignal(self):
         macdAll = self._stockstatClass.get('macd')
         rsiAll = self._stockstatClass.get('rsi_9')
@@ -94,10 +106,11 @@ class BitSignalFinder():
                 return False
 
             self._buyNum += 1
-            if(float(crntPrice) > float(self._bollLBXPrice)):
-                self._buyPrice = float(self._bollLBXPrice)
-            else:
-                self._buyPrice = crntPrice
+            # 最安で買うか現時点での値段で買うか。。
+            # if(float(crntPrice) > float(self._bollLBXPrice)):
+            #     self._buyPrice = float(self._bollLBXPrice)
+            # else:
+            self._buyPrice = crntPrice
             print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._tickDataList[TICK_NEWEST][1], self._buyPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
             return True
 
@@ -124,12 +137,58 @@ class BitSignalFinder():
             # rsiに値が入っていること
             math.isnan(self._stockstatClass.get('rsi_9')[TICK_NEWEST]) == False and
             self._stockstatClass.get('rsi_9')[TICK_NEWEST] < 60.0 and
+
             # 高値の時は買わない
-            scaledPrice < 0.2 and
+            scaledPrice < 0.25 and
             # 0に行くとさらに下がる可能性があるので
             scaledPrice > 0.05
         ):
             return True
+
+
+
+
+    def sellSignal(self):
+        macdAll = self._stockstatClass.get('macd')
+        rsiAll = self._stockstatClass.get('rsi_9')
+
+        crntPrice = self._tickDataList[TICK_NEWEST][1]
+        scaledPrice = self._scaler.transform(crntPrice)[0][0]
+        if(
+            self._buyNum > 0.0 and
+            #3円以上値上がりしてること（手数料があるため）
+            float(crntPrice) > float(self._buyPrice)
+
+        ):
+            self._buyNum -= 1
+            self._sellPrice = crntPrice
+            print("***Sell! {} price:{}, macd:{}, rsi:{}".format(self._tickDataList[TICK_NEWEST][1], crntPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST]))
+            return True
+
+        return False
+
+
+
+    def _getMinSellPrice(self):
+        #10万円以下手数料
+        extraFee = 0.0015
+        #実際に払った金額
+        actualBuyPrice = self._buyPrice * self._coinAmount
+
+        #50万以下だったら0.14%
+        if(actualBuyPrice > 100000.0 and actualBuyPrice <= 500000.0):
+            extraFee = 0.0014
+
+        #手数料金額（買った時＋売った時の手数料になるが面倒なのでとりあえず2倍）
+        payingFee = actualBuyPrice * extraFee * 2
+
+        #最低売り金額
+        actualSellPrice = actualBuyPrice + payingFee + self._minEarn
+        #1コインに置き換え
+        self._sellPrice = actualSellPrice/self._coinAmount
+
+
+
 
 
     """
@@ -184,13 +243,13 @@ class BitSignalFinder():
     def isGoldenXed(self):
         allMacdH = self._stockstatClass.get('macdh')
         allMacd = self._stockstatClass.get('macd')
-        print("1:{}, 2:{}, 3:{}".format((allMacdH[TICK_NEWEST] - allMacd[TICK_NEWEST]), (allMacdH[-2] - allMacd[-2]), (allMacdH[-3] - allMacd[-3])))
+        print("1:{}, 2:{}, 3:{}".format((allMacdH[TICK_NEWEST] - allMacd[TICK_NEWEST]), (abs(allMacdH[-2] - allMacd[-2])/mean([allMacdH[-2],allMacd[-2]])), (allMacdH[-3] - allMacd[-3])))
         if (
             len(allMacdH) > 2 and len(allMacd) > 2 and
             # macdHの一番最新は確実に上回っている事
             allMacdH[TICK_NEWEST] - allMacd[TICK_NEWEST] > 0 and
-            # 2番目は同額
-            allMacdH[-2] - allMacd[-2] == 0 and
+            # 2番目はほぼ同額（差が1.6%以下）
+            abs((allMacdH[-2] - allMacd[-2])/mean([abs(allMacdH[-2]),abs(allMacd[-2])])) <= 0.016 and
             # 3番目はMacdHが低い
             allMacdH[-3] - allMacd[-3] < 0
         ):

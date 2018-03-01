@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     bitsignal = BitSignalFinder(bitflyer._tickList, bitflyer._candleStats)
 
-    tickFilePath = "./csv/tick_201802272356_BTC_JPY.csv"
+    tickFilePath = "./csv/tick_201803011015_BTC_JPY.csv"
     df = pd.read_csv(tickFilePath)
     tmpList = df.values.tolist()
     for tick in tmpList:
@@ -31,6 +31,7 @@ if __name__ == '__main__':
         # randWait = np.random.randint(1, 3, dtype="int")
         # time.sleep(int(randWait))
 
+    print("total Earned:{}".format(bitsignal._totalEarned))
     bitflyer.initGraph()
     bitflyer.makeGraph(bitflyer.convertToStockStats(), False)
 

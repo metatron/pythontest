@@ -26,6 +26,11 @@ PARAM_BOLL_LB = 11
 #配列の一番最後が一番最新
 TICK_NEWEST = -1
 
+TICK_PARAM_DATETIME = 0
+TICK_PARAM_PRICE = 1
+
+# ゴールデンXから下記分間はXした時間
+GOLDENXED_INTERVAL = 4
 
 class BitSignalFinder():
     def __init__(self, tickDataList, stockstatClass, params=[]):
@@ -61,6 +66,9 @@ class BitSignalFinder():
         self._possibleSellPrice = 0
         # ボリンジャーバンドを下抜けた事がある
         self._hasLowerBollLb = False
+        # ゴールデンクロスになった事がある
+        self._isGoldedXed = False
+        self._goldedXedTime = 0
 
 
     def update(self, tickDataList, stockstatClass):
@@ -73,7 +81,10 @@ class BitSignalFinder():
         self._scaler.fit_transform(npPriceList)
 
         #ボリンジャー下抜け調査
-        self.isCrossingLowBolling()
+        self.checkCrossingLowBolling()
+
+        #ゴールデンクロスチェック
+        self.checkGoldenXed()
 
         # if(len(self._params) > 0):
         #     for param_ in self._params:
@@ -82,19 +93,19 @@ class BitSignalFinder():
 
 
     def buySignal(self):
-        macdAll = self._stockstatClass.get('macd')
+        macdhAll = self._stockstatClass.get('macdh')
         rsiAll = self._stockstatClass.get('rsi_9')
-        # print(macdAll)
-        # print()
+        if len(macdhAll) > 4 :
+            print("buySignal 1>2:{}, 2>3:{}, _buyLogic_Boll:{}".format((macdhAll[TICK_NEWEST] > macdhAll[-2]), (macdhAll[-2] > macdhAll[-3]), self._buyLogic_Boll()))
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
 
         crntPrice = self._tickDataList[TICK_NEWEST][1]
         if(
-            len(macdAll) > 3 and
+            len(macdhAll) > 3 and
             self._buyNum == 0 and
 
-            #macd, rsiを使用
-            # self._buyLogic_MACD()
+            # 右肩上がり
+            macdhAll[TICK_NEWEST] > macdhAll[-2] and macdhAll[-2] > macdhAll[-3] and
 
             #ボリンジャーを用いた売りロジック
             self._buyLogic_Boll()
@@ -109,7 +120,7 @@ class BitSignalFinder():
 
             # 最低売り金額を算出
             self._sellPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, self._minEarn)[0]
-            print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._tickDataList[TICK_NEWEST][1], self._buyPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
+            print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._tickDataList[TICK_NEWEST][1], self._buyPrice, macdhAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
             return True
 
         return False
@@ -119,7 +130,7 @@ class BitSignalFinder():
     def _buyLogic_Boll(self):
         bollLbAll = self._stockstatClass.get('boll_lb')
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
-        print("_buyLogic_Boll: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.isGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
+        print("_buyLogic_Boll: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
         if(
             #ボリンジャーLBが存在する
             math.isnan(bollLbAll[TICK_NEWEST]) == False and
@@ -129,8 +140,10 @@ class BitSignalFinder():
             #今は上回っている
             self.isAboveLowBoll() and
 
-            #ゴールデンクロス
-            self.isGoldenXed() and
+            #ゴールデンクロス時間
+            self.stillGoldenXed() and
+
+
 
             # rsiに値が入っていること
             math.isnan(self._stockstatClass.get('rsi_9')[TICK_NEWEST]) == False and
@@ -142,6 +155,7 @@ class BitSignalFinder():
             scaledPrice > 0.05
         ):
             return True
+        return False
 
 
 
@@ -213,7 +227,7 @@ class BitSignalFinder():
         ボリンジャーバンドLBを下抜けたかどうかの判断
         ロウソクの下ヒゲが当たったら_hasLowerBollLbをON
     """
-    def isCrossingLowBolling(self):
+    def checkCrossingLowBolling(self):
         if(
             len(self._stockstatClass) > 3 and
             #ちゃんと値が入っていること
@@ -229,8 +243,6 @@ class BitSignalFinder():
             self._bollLBXPrice = self._stockstatClass.get('low')[TICK_NEWEST]
             self._possibleSellPrice = self._bollLBXPrice + 3
             self._hasLowerBollLb = True
-            return True
-        return False
 
 
 
@@ -258,21 +270,43 @@ class BitSignalFinder():
 
 
 
-    def isGoldenXed(self):
+    """
+        ゴールデンクロスチェック
+        時間、フラグ更新
+    """
+    def checkGoldenXed(self):
         allMacdH = self._stockstatClass.get('macdh')
         allMacd = self._stockstatClass.get('macd')
-        print("1:{}, 2:{}, 3:{}".format((allMacdH[TICK_NEWEST] - allMacd[TICK_NEWEST]), (abs(allMacdH[-2] - allMacd[-2])/mean([allMacdH[-2],allMacd[-2]])), (allMacdH[-3] - allMacd[-3])))
+        if(len(allMacdH) <= 2):
+            return
+
         if (
-            len(allMacdH) > 2 and len(allMacd) > 2 and
+            len(allMacdH) > 1 and len(allMacd) > 1 and
             # macdHの一番最新は確実に上回っている事
             allMacdH[TICK_NEWEST] - allMacd[TICK_NEWEST] > 0 and
-            # 2番目はほぼ同額（差が1.6%以下）
-            abs((allMacdH[-2] - allMacd[-2])/mean([abs(allMacdH[-2]),abs(allMacd[-2])])) <= 0.016 and
-            # 3番目はMacdHが低い
-            allMacdH[-3] - allMacd[-3] < 0
+            # 2番目はMacdHが低い
+            allMacdH[-2] - allMacd[-2] < 0
         ):
+            self._isGoldedXed = True
+            crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
+            self._goldedXedTime = int(str(crntTime)[:12])
+            print("*********Xed!")
+
+
+
+    """
+        ゴールデンクロス期間かどうか
+    """
+    def stillGoldenXed(self):
+        if(len(self._tickDataList) <= 0):
+            return False
+
+        tmpTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
+        crntTime = int(str(tmpTime)[:12])
+        if(self._isGoldedXed and (crntTime - self._goldedXedTime) <= GOLDENXED_INTERVAL):
             return True
         return False
+
 
 
     """

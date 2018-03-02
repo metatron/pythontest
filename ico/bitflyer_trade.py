@@ -20,9 +20,6 @@ from utils.stop_watch import stop_watch
 
 from ico.bit_buysell_logic import BitSignalFinder
 
-key = ""
-secret = ""
-
 TICK_POS_DATE = 0
 TICK_POS_PRICE = 1
 
@@ -39,7 +36,13 @@ CANDLE_POS_VOLUME = 4
 
 
 class BitFlyerController():
-    def __init__(self, coin="BTC_JPY"):
+    """
+    :param key
+    :param secret
+    :param code 2段階認証
+    """
+    def __init__(self, coin="BTC_JPY", key="", secret="", code=""):
+        self._coin = coin
         self._data = json.dumps({"product_code":coin}).encode("utf-8")
         self._url = "https://api.bitflyer.jp"
 
@@ -51,6 +54,8 @@ class BitFlyerController():
             'ACCESEE-SIGN' : sign,
             'Content-Type' : 'application/json'
         }
+
+        self._code = code
 
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
         self._tickFilePath = "./csv/tick_" + str(crntDateTime) + "_" + coin + ".csv"
@@ -68,6 +73,10 @@ class BitFlyerController():
         #グラフ用
         self._ax1 = None
         self._ax2 = None
+
+        #注文番号リスト
+        self._buyIdList = []
+        self._sellIdList = []
 
 
 
@@ -90,6 +99,52 @@ class BitFlyerController():
         resultJson = self._getRequestData(path)
         self._addToTickList(resultJson['mid_price'])
         self._convertTickDataToCandle(self._tickList)
+
+
+    """
+        売買注文を出す。
+        
+        :param side "BUY", "SELL"
+        :param coinPrice 値段
+        :param size 個数
+        :param expireMin 
+    """
+    def orderCoinRequest(self, side, coinPrice, size, expireMin=180):
+        if coinPrice == 0:
+            print("************ [orderCoinRequest] coinPrice is 0!")
+            return
+
+        if size == 0:
+            print("************ [orderCoinRequest] size is 0!")
+            return
+
+        if side == None:
+            print("************ [orderCoinRequest] side is None!")
+            return
+
+        params = {
+            "product_code": self._coin,
+            "child_order_type": "LIMIT",
+            "side": side,
+            "price": coinPrice,
+            "size": size,
+            "minute_to_expire": expireMin,
+            "time_in_force": "GTC"
+        }
+
+        path = "/v1/me/sendchildorder"
+        resultJson = self._getRequestData(path, params)
+        if resultJson == None:
+            print("************ [orderCoinRequest] request Error!")
+            return
+
+        orderId = resultJson['child_order_acceptance_id']
+        if orderId == None or orderId == "":
+            print("************ [orderCoinRequest] orderId Error!")
+            return
+
+        print("*** [orderCoinRequest] {} order sent. price:{}, size:{}".format(side, coinPrice, size))
+
 
 
 
@@ -303,11 +358,6 @@ class BitFlyerController():
             self._convertTickDataToCandle(self._tickList)
 
 
-    def getBestPrice(self):
-        crntPrice = self._tickList[NEWEST_TICK_POS][TICK_POS_PRICE]
-        extraFee = crntPrice * 0.0001 * 2
-        sellPrice = crntPrice + extraFee
-
 
 
 
@@ -319,10 +369,12 @@ if __name__ == '__main__':
 
     index=0
     while(index<10):
-        bitflyer.getTickData()
+        bitflyer.getBoardData()
         stockstatsClass = bitflyer.convertToStockStats()
         print(bitflyer._tickList[-1])
-        # bitsignal.update(bitflyer._tickList, stockstatsClass)
+        bitsignal.update(bitflyer._tickList, stockstatsClass)
+        bitsignal.buySignal()
+        bitsignal.sellSignal()
 
         # bitflyer.makeGraph(stockstatsClass)
         bitflyer.writeTickList()

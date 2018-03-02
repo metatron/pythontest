@@ -92,7 +92,7 @@ class BitSignalFinder():
 
 
 
-    def buySignal(self):
+    def buySignal(self, dryRun=True):
         macdhAll = self._stockstatClass.get('macdh')
         rsiAll = self._stockstatClass.get('rsi_9')
         # if len(macdhAll) > 4 :
@@ -108,7 +108,7 @@ class BitSignalFinder():
             macdhAll[TICK_NEWEST] > macdhAll[-2] and macdhAll[-2] > macdhAll[-3] and
 
             #ボリンジャーを用いた売りロジック
-            self._buyLogic_Boll()
+            self._buyLogic_Boll_GX()
         ):
 
             self._buyNum += 1
@@ -127,7 +127,7 @@ class BitSignalFinder():
 
 
 
-    def _buyLogic_Boll(self):
+    def _buyLogic_Boll_GX(self):
         bollLbAll = self._stockstatClass.get('boll_lb')
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
         # print("_buyLogic_Boll: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
@@ -158,9 +158,11 @@ class BitSignalFinder():
         return False
 
 
+    def _buyLogic_Boll_UB(self):
+        pass
 
 
-    def sellSignal(self):
+    def sellSignal(self, dryRun=True):
         macdAll = self._stockstatClass.get('macd')
         rsiAll = self._stockstatClass.get('rsi_9')
 
@@ -173,10 +175,10 @@ class BitSignalFinder():
         ):
             self._buyNum -= 1
             self._sellPrice = crntPrice
-            print("***Sell! {} price:{}, macd:{}, rsi:{}".format(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME], crntPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST]))
             #利益算出
             earnedVal = self._sellPrice - self._buyPrice
             self._totalEarned += earnedVal
+            print("***Sell! {} price:{}, macd:{}, rsi:{}, totalEarned:{}".format(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME], crntPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._totalEarned))
 
             # 売ったら指標パラメータリセット
             self.resetBuySellParams()
@@ -230,7 +232,7 @@ class BitSignalFinder():
 
 
     """
-        ボリンジャーバンドLBを下抜けたかどうかの判断
+        バンドLBを下抜けたかどうかの判断
         ロウソクの下ヒゲが当たったら_hasLowerBollLbをON
     """
     def checkCrossingLowBolling(self):

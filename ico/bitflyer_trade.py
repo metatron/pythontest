@@ -22,6 +22,7 @@ from ico.bit_buysell_logic import BitSignalFinder
 
 TICK_POS_DATE = 0
 TICK_POS_PRICE = 1
+TICK_POS_VOLUME = 2
 
 NEWEST_TICK_POS = -1
 
@@ -71,6 +72,7 @@ class BitFlyerController():
         self._prevTick = []
 
         #グラフ用
+        self._fig = None
         self._ax1 = None
         self._ax2 = None
 
@@ -87,7 +89,7 @@ class BitFlyerController():
     def getTickData(self):
         path = "/v1/ticker"
         resultJson = self._getRequestData(path)
-        self._addToTickList(resultJson['ltp'])
+        self._addToTickList(resultJson['ltp'], resultJson['volume_by_product'])
         self._convertTickDataToCandle(self._tickList)
 
 
@@ -147,15 +149,22 @@ class BitFlyerController():
 
 
 
+    def lossCut(self, price):
+        if(price <= 0):
+            return
+
+        #TODO 売り注文キャンセル
+
+
 
     """
         最大 MAX_TICKLIST_SIZE件のtickデータを保持する。
         オーバーした場合は切り捨て
     """
-    def _addToTickList(self, price):
+    def _addToTickList(self, price, volume=0):
         # tickリストに追加
         nowDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-        self._tickList.append([str(nowDateTime), price])
+        self._tickList.append([str(nowDateTime), price, volume])
 
         # メモリに乗り切らない可能性があるのでリサイズ
         startPos = max(0, len(self._tickList)-MAX_TICKLIST_SIZE)
@@ -218,7 +227,8 @@ class BitFlyerController():
                 self._candleStats[prevDateTimeStr][CANDLE_POS_CLOSE] = prevClosePrice
 
         # 出来高取得（API叩く？）
-        # self._candleStats[crntDateTimeStr][4] = tick[2]
+        if len(tick) > 2:
+            self._candleStats[crntDateTimeStr][CANDLE_POS_VOLUME] = tick[TICK_POS_VOLUME]
 
         # close額設定の為保存しておく
         self._prevTick = tick
@@ -250,11 +260,11 @@ class BitFlyerController():
 
     def initGraph(self):
         # plot graph
-        fig = plt.figure(figsize=(10, 5))
-        plt.title('Stock Graph', fontsize=10)
+        self._fig = plt.figure(figsize=(10, 5))
+        plt.title('Stock Graph', fontsize=8)
 
         #一つ目
-        self._ax1 = fig.add_subplot(1,1,1)
+        self._ax1 = self._fig.add_subplot(1,1,1)
 
         # 2つ目
         self._ax2 = self._ax1.twinx()
@@ -269,13 +279,14 @@ class BitFlyerController():
 
         # グラフ用
         if len(params) == 0:
-            params = ['open', 'high', 'low', 'close', 'macd', 'macds', 'macdh', 'boll', 'boll_ub', 'boll_lb']
+            params = ['open', 'high', 'low', 'close', 'macd', 'macds', 'macdh', 'boll', 'boll_ub', 'boll_lb', 'volume']
             stockstatsClass.get("macd")
             stockstatsClass.get("macds")
             stockstatsClass.get("macdh")
             stockstatsClass.get("boll")
             stockstatsClass.get("boll_ub")
             stockstatsClass.get("boll_lb")
+            stockstatsClass.get("volume")
         graphData = np.array(stockstatsClass.as_matrix(columns=params), dtype='float')
 
         timetickList = []
@@ -330,6 +341,12 @@ class BitFlyerController():
             macdh_ = graphData[:, ind]
             p3, = self._ax2.plot(macdh_, label=r'macd', color='grey')
 
+        # if'volume' in params:
+        #     self._ax3 = self._fig.add_subplot(2, 1, 2)
+        #     ind = params.index('volume')
+        #     volume_ = graphData[:, ind]
+        #     p3, = self._ax3.plot(volume_, label=r'volume', color='blue')
+
         if display == False:
             if (os.path.exists("../figures") != True):
                 os.mkdir("../figures")
@@ -369,14 +386,17 @@ if __name__ == '__main__':
 
     index=0
     while(index<10):
-        bitflyer.getBoardData()
+        bitflyer.getTickData()
         stockstatsClass = bitflyer.convertToStockStats()
         print(bitflyer._tickList[-1])
+
         bitsignal.update(bitflyer._tickList, stockstatsClass)
+        bitsignal.decideLossCut()
+
         bitsignal.buySignal()
         bitsignal.sellSignal()
 
-        # bitflyer.makeGraph(stockstatsClass)
+        bitflyer.makeGraph(stockstatsClass)
         bitflyer.writeTickList()
 
         # index += 1

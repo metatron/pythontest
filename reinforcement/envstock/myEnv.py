@@ -13,8 +13,8 @@ from sklearn.preprocessing import MinMaxScaler
 
 logger = logging.getLogger(__name__)
 
-import scraping.kabucom
-import scraping.SignalFinder
+from ico.bitflyer_trade import BitFlyerController
+from ico.bit_buysell_logic import BitSignalFinder
 
 ACTION_BUY = 0
 ACTION_STAY = 1
@@ -33,7 +33,7 @@ class MyEnv(gym.Env):
         tf.set_random_seed(RAND_SEED)
 
         # 保存されたCSVを読み込んでstockstatsフォーマットにする
-        self._kabucom = scraping.kabucom.KabuComMainController()
+        self._bitTrade = BitFlyerController()
 
         #でーたファイル読み込み
         path = "stockTick_20180216_7201.csv"
@@ -57,6 +57,7 @@ class MyEnv(gym.Env):
 
         #0: 買う、1:ステイ、2:売る
         self.action_space = spaces.Discrete(3)
+        #actionに伴う所持金の変化
         self.observation_space= spaces.Box(
             low=np.zeros(5),
             high=np.array([2000.0,2000.0,2000.0,2000.0,1.0]),
@@ -70,6 +71,16 @@ class MyEnv(gym.Env):
         #買いの回数
         self._boughtNum = 0
 
+        self._bitflyer = BitFlyerController()
+        # bitflyer.initGraph()
+
+        self._bitsignal = BitSignalFinder(self._bitflyer._tickList, self._bitflyer._candleStats)
+
+        tickFilePath = "./csv/tick_201803051658_BTC_JPY.csv"
+        df = pd.read_csv(tickFilePath)
+        self._tickDataList = df.values.tolist()
+
+        self.totalStep = len(self._tickDataList)
 
     def _reset(self):
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
@@ -87,17 +98,11 @@ class MyEnv(gym.Env):
     def _step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
 
-        crntTick = self._tickDataList[self.index]
-        tmpTick = crntTick[1:]
-        tmpTick[0] = int(tmpTick[0])
-        #上記で実際のtickデータと同じにコンバート
-        #下記でコントローラにストックしている状態にする
-        self._kabucom._stockTicks.append(tmpTick)
-        self._kabucom._statusUpdate()
-        stockstatClass = self._kabucom.convertToStockStats(['macd'])
-        self._alldata = stockstatClass.as_matrix(columns=['open', 'high', 'low', 'close', 'volume', 'macd'])
-
-        self.state = self._alldata
+        tmpTick = self._tickDataList[self.index]
+        self._bitflyer._tickList.append(tmpTick)
+        self._bitflyer._convertTickDataToCandle(self._bitflyer._tickList)
+        stockstatsClass = self._bitflyer.convertToStockStats()
+        self._bitsignal.update(self._bitflyer._tickList, stockstatsClass)
 
         #買う事ができる場合リワードは少なくする
         if(self._boughtNum == 0):
@@ -108,22 +113,7 @@ class MyEnv(gym.Env):
 
 
 
-        #株価が上がった
-        if(todayObs[0] - yesterDayObj[3] > 0):
-            #予測が[上がった]の場合rewardを与える
-            if(action == 1):
-                self.reward += 1.0
-            #[下がった]の場合はrewardなし
-            else:
-                self.reward -= 1.0
-        #株価が下がった
-        else:
-            #予測が[上がった]の場合rewardなし
-            if(action == 1):
-                self.reward -= 1.0
-            #[下がった]の場合はrewardあり
-            else:
-                self.reward += 1.0
+
 
         self.index += 1
         done = self.index >= self.totalStep

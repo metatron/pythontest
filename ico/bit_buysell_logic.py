@@ -199,15 +199,15 @@ class BitSignalFinder():
             # 少なくとも直前2つのキャンドルは陽線
             (crntCandleType == CANDLETYPE_POS and prevCandleType == CANDLETYPE_POS) and
             # バンド上昇率0.0007以上をキープ（ろうそくが作られないとダメ。。)
-            # bandratio[0] - bandratio[1] >= 0.0007 and bandratio[1] - bandratio[2] >= 0.0007 and
+            bandratio[0] >= 0.0007 and
             #バンドの上を推移
             self.isCrossingHighBolling(TICK_NEWEST) and
             # 前のロウソクの高値よりも現底値が明らかに高い
-            self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE] - highAll[-2] > 0 and
+            crntPrice - highAll[-2] > 0 and
             # 買いすぎチェック
             rsiAll[TICK_NEWEST] < 65.0
         ):
-            print("***Buy logic:[_buyLogic_Boll_UB] True")
+            print("***Buy logic:[_buyLogic_Boll_UB] crntPrice:{}, closeAll2:{}, highAll2:{}, bandratio:{}".format(crntPrice, closeAll[-2], highAll[-2], bandratio))
             return True
         return False
 

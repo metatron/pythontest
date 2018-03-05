@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     index=0
     while(index<10):
-        bitflyer.getBoardData()
+        bitflyer.getTickData()
         stockstatsClass = bitflyer.convertToStockStats()
         print(bitflyer._tickList[-1])
         bitsignal.update(bitflyer._tickList, stockstatsClass)

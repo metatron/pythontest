@@ -1,3 +1,3 @@
 from reinforcement.envstock.myEnv import MyEnv
-import scraping.kabucom
-import scraping.SignalFinder
+from ico.bitflyer_trade import BitFlyerController
+from ico.bit_buysell_logic import BitSignalFinder

@@ -116,10 +116,12 @@ class BitSignalFinder():
             # 3連続右肩上がり
             macdhAll[TICK_NEWEST] > macdhAll[-2] and macdhAll[-2] > macdhAll[-3] and
 
-            #ボリンジャーを用いた売りロジック
-            # self._buyLogic_Boll_GX() or
-            #バンドの上を推移
-            self._buyLogic_Boll_UB()
+            (
+                # ボリンジャーを用いた売りロジック
+                self._buyLogic_Boll_GX() or
+                #バンドの上を推移
+                self._buyLogic_Boll_UB()
+            )
         ):
 
             self._buyNum += 1
@@ -166,6 +168,7 @@ class BitSignalFinder():
             # 0に行くとさらに下がる可能性があるので
             scaledPrice > 0.05
         ):
+            print("***Buy logic:[_buyLogic_Boll_GX] True")
             return True
         return False
 
@@ -177,28 +180,36 @@ class BitSignalFinder():
     """
     def _buyLogic_Boll_UB(self):
         highAll = self._stockstatClass.get('high')
-        lowAll = self._stockstatClass.get('low')
-
-        if(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME] > 20180228151600):
-            print("test")
+        closeAll = self._stockstatClass.get('close')
+        rsiAll = self._stockstatClass.get('rsi_9')
+        crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
 
         crntCandleType = self.getCandleType(TICK_NEWEST)
         prevCandleType = self.getCandleType(-2)
 
         bandratio = self._getBandBolaRatio()
 
+        # print("***buyLogic_Boll_UB: crntCandleType:{}, prevCandleType:{}, bandRatio1:{}, bandRatio2:{}, bandRatio3:{}, xLb:{}, lowIsHigh:{}, rsi:{}".format(crntCandleType,prevCandleType,bandratio[0],bandratio[1],bandratio[2],self.isCrossingHighBolling(TICK_NEWEST),(self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE] - highAll[-2] > 0),rsiAll[TICK_NEWEST]))
+
 
         if(
+            len(closeAll) > 2 and
+            #前回のlowとの差が300円以上
+            crntPrice - closeAll[-2] > 300.0 and
             # 少なくとも直前2つのキャンドルは陽線
             (crntCandleType == CANDLETYPE_POS and prevCandleType == CANDLETYPE_POS) and
-            # バンド上昇率0.0007以上をキープ
-            # bandratio[TICK_NEWEST] - bandratio[-2] >= 0.0007 and bandratio[-2] - bandratio[-3] >= 0.0007 and
+            # バンド上昇率0.0007以上をキープ（ろうそくが作られないとダメ。。)
+            # bandratio[0] - bandratio[1] >= 0.0007 and bandratio[1] - bandratio[2] >= 0.0007 and
             #バンドの上を推移
             self.isCrossingHighBolling(TICK_NEWEST) and
             # 前のロウソクの高値よりも現底値が明らかに高い
-            lowAll[TICK_NEWEST] - highAll[-2] > 0
+            self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE] - highAll[-2] > 0 and
+            # 買いすぎチェック
+            rsiAll[TICK_NEWEST] < 65.0
         ):
-            return
+            print("***Buy logic:[_buyLogic_Boll_UB] True")
+            return True
+        return False
 
 
     def sellSignal(self, dryRun=True):
@@ -445,7 +456,16 @@ class BitSignalFinder():
             bandlist[TICK_NEWEST] - bandlist[-3] < 0.001
         ):
             oldSellPrice = self._sellPrice
-            self._sellPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, 0.5)[0]
+            # 最低限の売り値取得（0.5円以上の利益をだす）
+            lowestPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, 0.5)[0]
+            # 現在の値段の方が高かったらそっちを使用
+            crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
+            if(crntPrice > lowestPrice):
+                self._sellPrice = crntPrice
+            else:
+                self._sellPrice = lowestPrice
+
+
             self._isLossCut = True
             print("***LosCut! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
 
@@ -454,6 +474,10 @@ class BitSignalFinder():
 
     def getCandleType(self, timePrev=TICK_NEWEST):
         highAll = self._stockstatClass.get('high')
+
+        if(len(highAll) < 3):
+            return CANDLETYPE_NEG
+
         lowAll = self._stockstatClass.get('low')
 
         # 現在のロウソクはまだできてないのでTickデータを使用

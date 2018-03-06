@@ -215,6 +215,10 @@ class BitFlyerController():
             if crntPrice < crntLow:
                 self._candleStats[crntDateTimeStr][CANDLE_POS_LOW] = crntPrice
 
+            # うまくmacdなどのデータが取れないのでテスト的にここに置く。
+            self._candleStats[crntDateTimeStr][CANDLE_POS_CLOSE] = crntPrice
+
+
         # 現在時分のキーが設定されてない場合は新しい時分
         else:
             # 初めて追加
@@ -289,6 +293,8 @@ class BitFlyerController():
             stockstatsClass.get("volume")
         graphData = np.array(stockstatsClass.as_matrix(columns=params), dtype='float')
 
+        plt.clf()
+
         timetickList = []
         #x軸プロット(時間のみ[8:12]）
         timelist = sorted(self._candleStats.keys())
@@ -331,7 +337,7 @@ class BitFlyerController():
             macd_ = graphData[:, ind]
             p3, = self._ax2.plot(macd_, label=r'macd', color='orange')
 
-        if 'macd' in params:
+        if 'macds' in params:
             ind = params.index('macds')
             macds_ = graphData[:, ind]
             p3, = self._ax2.plot(macds_, label=r'macd', color='yellow')

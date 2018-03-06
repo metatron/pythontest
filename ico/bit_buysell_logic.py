@@ -4,6 +4,8 @@ import numpy as np
 import scraping
 import math
 import stockstats
+import json
+import os
 
 
 from sklearn.preprocessing import MinMaxScaler
@@ -35,6 +37,10 @@ GOLDENXED_INTERVAL = 4
 # ロウソク足の種類
 CANDLETYPE_POS = 0
 CANDLETYPE_NEG = 1
+
+
+#status save
+STATUS_FILEPATH = './status.json'
 
 
 class BitSignalFinder():
@@ -79,6 +85,8 @@ class BitSignalFinder():
         #ロスカット系
         self._isLossCut = False
 
+        self._loadStatus()
+
 
     def update(self, tickDataList, stockstatClass):
         self._tickDataList = tickDataList
@@ -93,7 +101,7 @@ class BitSignalFinder():
         self.checkCrossingLowBolling()
 
         #ゴールデンクロスチェック
-        self.checkGoldenXed()
+        self.checkGoldenXed_MacdS()
 
         # if(len(self._params) > 0):
         #     for param_ in self._params:
@@ -102,11 +110,14 @@ class BitSignalFinder():
 
 
     def buySignal(self, dryRun=True):
-        macdhAll = self._stockstatClass.get('macdh')
+        macdhAll = self._stockstatClass.get('macdh') # grey
         rsiAll = self._stockstatClass.get('rsi_9')
         # if len(macdhAll) > 4 :
-        #     print("buySignal 1>2:{}, 2>3:{}, _buyLogic_Boll:{}".format((macdhAll[TICK_NEWEST] > macdhAll[-2]), (macdhAll[-2] > macdhAll[-3]), self._buyLogic_Boll()))
+        #     print("buySignal 1>2:{}, 2>3:{}".format((macdhAll[TICK_NEWEST] > macdhAll[-2]), (macdhAll[-2] > macdhAll[-3])))
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
+
+        # if(self._tickDataList[TICK_NEWEST][0] == 20180228103158):
+        #     print("test")
 
         crntPrice = self._tickDataList[TICK_NEWEST][1]
         if(
@@ -135,6 +146,9 @@ class BitSignalFinder():
             # 最低売り金額を算出
             self._sellPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, self._minEarn)[0]
             print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME], self._buyPrice, macdhAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
+
+            self._saveStatus()
+
             return True
 
         return False
@@ -335,12 +349,12 @@ class BitSignalFinder():
 
 
     """
-        ゴールデンクロスチェック
+        ゴールデンクロスチェック（MacdHとMacd使用）
         時間、フラグ更新
     """
-    def checkGoldenXed(self):
-        allMacdH = self._stockstatClass.get('macdh')
-        allMacd = self._stockstatClass.get('macd')
+    def checkGoldenXed_MacdH(self):
+        allMacdH = self._stockstatClass.get('macdh') # grey
+        allMacd = self._stockstatClass.get('macd') # orange
         if(len(allMacdH) <= 2):
             return
 
@@ -351,6 +365,32 @@ class BitSignalFinder():
             # 2番目はMacdHが低い
             allMacdH[-2] - allMacd[-2] < 0
         ):
+            self._isGoldedXed = True
+            crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
+            self._goldedXedTime = int(str(crntTime)[:12])
+
+    """
+        ゴールデンクロスチェック（MacdとMacdS使用）
+        時間、フラグ更新
+        最初反応がmacdhを使用していたが、反応が早すぎる事がある。macdとmacdsに変更
+    """
+    def checkGoldenXed_MacdS(self):
+        allMacdH = self._stockstatClass.get('macdh') # grey
+        allMacdS = self._stockstatClass.get('macds') # yellow
+        if(len(allMacdH) <= 2):
+            return
+
+        crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
+        print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdS[-2] - allMacdH[-2])))
+
+        if (
+            len(allMacdH) > 2 and len(allMacdS) > 2 and
+            # macdの一番最新は確実に上回っている事
+            allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST] > 0 and
+            # 2番目はMacdSが低い
+            allMacdS[-2] - allMacdH[-2] < 0
+        ):
+            print("*************Xed!:{}".format(crntTime))
             self._isGoldedXed = True
             crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
             self._goldedXedTime = int(str(crntTime)[:12])
@@ -414,6 +454,8 @@ class BitSignalFinder():
         self._goldedXedTime = 0
         self._isLossCut = False
 
+        self._deleteStatus()
+
 
 
     def _getBandBolaRatio(self):
@@ -469,6 +511,8 @@ class BitSignalFinder():
             self._isLossCut = True
             print("***LosCut! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
 
+            self._saveStatus()
+
             return self._sellPrice
 
 
@@ -490,3 +534,36 @@ class BitSignalFinder():
         if(highAll[timePrev] > lowAll[timePrev]):
             return CANDLETYPE_POS
         return CANDLETYPE_NEG
+
+
+    def _saveStatus(self):
+        saveParam = {
+            'buyPrice': self._buyPrice,
+            'buyDateTime' : self._buyDateTime,
+            'sellPrice' : self._sellPrice,
+            'coinAmount' : self._coinAmount,
+            'minEarn': self._minEarn,
+            'buyNum': self._buyNum,
+            'isLossCut': self._isLossCut
+
+        }
+
+        with open(STATUS_FILEPATH, 'w', encoding='utf-8') as outfile:
+            json.dump(saveParam, outfile)
+
+
+    def _loadStatus(self):
+        if(os.path.exists(STATUS_FILEPATH)):
+            params = json.load(open(STATUS_FILEPATH))
+            self._buyPrice = params['buyPrice']
+            self._buyDateTime = params['buyDateTime']
+            self._sellPrice = params['sellPrice']
+            self._coinAmount = params['coinAmount']
+            self._minEarn = params['minEarn']
+            self._buyNum = params['buyNum']
+            self._isLossCut = params['isLossCut']
+
+
+    def _deleteStatus(self):
+        if (os.path.exists(STATUS_FILEPATH)):
+            os.remove(STATUS_FILEPATH)

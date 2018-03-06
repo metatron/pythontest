@@ -293,7 +293,7 @@ class BitFlyerController():
             stockstatsClass.get("volume")
         graphData = np.array(stockstatsClass.as_matrix(columns=params), dtype='float')
 
-        plt.clf()
+        # plt.clf()
 
         timetickList = []
         #x軸プロット(時間のみ[8:12]）

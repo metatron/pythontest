@@ -85,7 +85,12 @@ class BitSignalFinder():
         # バンドを上抜けた事がある
         self._hasBollUbed = False
         self._bollUbedTime = 0
+        self._bollUbedInterval = 0
+
+        #上をタッチした回数
         self._bollUbedNum = 0
+        self._crntUbedPrice = 0
+
 
         #ロスカット系
         self._isLossCut = False
@@ -129,19 +134,25 @@ class BitSignalFinder():
 
         crntPrice = self._tickDataList[TICK_NEWEST][1]
         if(
-            len(macdhAll) > 3 and
-            self._buyNum == 0 and
-
+            # 共通項目
             (
-                # 3連続右肩上がり
-                macdhAll[TICK_NEWEST] > macdhAll[-2] and macdhAll[-2] > macdhAll[-3] and
-                # ボリンジャーを用いた買いロジック
-                self._buyLogic_Boll_GX()
-            ) or
-
+                len(macdhAll) > 3 and
+                self._buyNum == 0
+            ) and
             (
-                #バンドの上を推移
-                self._buyLogic_Boll_UB()
+                #GX狙いロジック
+                (
+                    # 3連続右肩上がり
+                    macdhAll[TICK_NEWEST] > macdhAll[-2] and macdhAll[-2] > macdhAll[-3] and
+                    # ボリンジャーを用いた買いロジック
+                    self._buyLogic_Boll_GX()
+                ) or
+
+                #バンドウォーク狙いロジック
+                (
+                    #バンドの上を推移
+                    self._buyLogic_Boll_UB()
+                )
             )
         ):
 
@@ -168,7 +179,7 @@ class BitSignalFinder():
     def _buyLogic_Boll_GX(self):
         bollLbAll = self._stockstatClass.get('boll_lb')
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
-        # print("_buyLogic_Boll: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
+        print("_buyLogic_Boll_GX: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
         if(
             #ボリンジャーLBが存在する
             math.isnan(bollLbAll[TICK_NEWEST]) == False and
@@ -215,17 +226,15 @@ class BitSignalFinder():
 
         bandratio = self._getBandBolaRatio()
 
-        print("***buyLogic_Boll_UB: hasBollUbed:{}, stillBoll_UBed:{}".format(self._hasBollUbed, self.stillBoll_UBed()))
+        # print("***buyLogic_Boll_UB: hasBollUbed:{}, isBoll_UBed:{}".format(self._hasBollUbed, self.isBoll_UBed()))
 
 
         if(
             len(closeAll) > 2 and
-            #バンドの上を抜けた事がある
+            #バンドの上抜け期間中
             self._hasBollUbed and
-            #バンド上抜け期間内
-            self.stillBoll_UBed() and
-            #3回以上上抜けした
-            self._bollUbedNum > 3
+            #上抜けした回数が規定より上回っている
+            self.isBoll_UBed()
         ):
             print("***Buy logic:[_buyLogic_Boll_UB] crntPrice:{}, closeAll2:{}, highAll2:{}, bandratio:{}".format(crntPrice, closeAll[-2], highAll[-2], bandratio))
             return True
@@ -345,23 +354,27 @@ class BitSignalFinder():
         highAll = self._stockstatClass.get('high')
         if(len(highAll) < 3):
             return False
-        bollUbAll = self._stockstatClass.get('boll_ub')
-        #
-        # # 現在はロウソクができてないのでtickデータで調査
-        # if(time == TICK_NEWEST):
-        #     if (self._tickDataList[time][TICK_PARAM_PRICE] > self._stockstatClass.get('boll_ub')[time]):
-        #         print("checkCrossingHighBolling:{}".format("True"))
-        #         self._hasBollUbed = True
-        #         return True
 
-        if(highAll[time] > bollUbAll[time]):
-            tmpTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
-            crntTime = int(str(tmpTime)[:12])
+        tmpTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
+        crntTime = int(str(tmpTime)[:12])
+
+        if(self._hasBollUbed == False):
             self._hasBollUbed = True
             self._bollUbedTime = crntTime
-            self._bollUbedNum+=1
-            print("checkCrossingHighBolling: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedNum))
-            return True
+            self._bollUbedInterval = 1
+            print("checkCrossingHighBolling => Begin: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedInterval))
+
+        else:
+            if(crntTime - self._bollUbedTime == 1):
+                self._bollUbedTime = crntTime
+                self._bollUbedInterval += 1
+                print("checkCrossingHighBolling => Update: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedInterval))
+
+            elif(self._bollUbedInterval >= GOLDENXED_INTERVAL):
+                self._hasBollUbed = False
+                self._bollUbedInterval = 0
+                print("checkCrossingHighBolling => False: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedInterval))
+
         return False
 
 
@@ -369,21 +382,29 @@ class BitSignalFinder():
         バンド上限にタッチした期間かどうか
         4足目まで継続
     """
-    def stillBoll_UBed(self):
+    def isBoll_UBed(self):
         if(len(self._tickDataList) <= 0):
             return False
 
+        bollUbAll = self._stockstatClass.get('boll_ub')
+
         tmpTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
         crntTime = int(str(tmpTime)[:12])
-        # 上限突破した
+        crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
+        # 上限突破した期間内にタッチしたかどうか
         if(self._hasBollUbed):
-            # 期間内
-            if((crntTime - self._bollUbedTime) <= GOLDENXED_INTERVAL):
+            if(crntPrice > bollUbAll[TICK_NEWEST]):
+                print("******isBoll_UBed1:{}".format(crntTime))
+                self._bollUbedNum += 1
+
+            if(
+                # 2回以上タッチしたらUbした。
+                self._bollUbedNum > 3 and
+                self._crntUbedPrice != crntPrice
+            ):
+                print("******isBoll_UBed2:{}".format(crntTime))
                 return True
-            # 期間外
-            else:
-                self._hasBollUbed = False
-                self._bollUbedNum = 0
+
         return False
 
 
@@ -495,6 +516,7 @@ class BitSignalFinder():
 
         self._hasBollUbed = False
         self._bollUbedTime = 0
+        self._bollUbedInterval = 0
         self._bollUbedNum = 0
 
         self._deleteStatus()

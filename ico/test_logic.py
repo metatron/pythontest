@@ -26,7 +26,7 @@ if __name__ == '__main__':
         bitsignal.buySignal()
         bitsignal.sellSignal()
 
-        print(bitflyer._tickList[-1],bitsignal._getBandBolaRatio())
+        print(bitflyer._tickList[-1])
 
         # index += 1
         # randWait = np.random.randint(1, 3, dtype="int")

@@ -89,7 +89,7 @@ class BitSignalFinder():
 
         #上をタッチした回数
         self._bollUbedNum = 0
-        self._crntUbedPrice = 0
+        self._crntUbedTime = 0
 
 
         #ロスカット系
@@ -373,6 +373,9 @@ class BitSignalFinder():
             elif(self._bollUbedInterval >= GOLDENXED_INTERVAL):
                 self._hasBollUbed = False
                 self._bollUbedInterval = 0
+                #上抜け回数の方もリセット
+                self._bollUbedNum = 0
+                self._crntUbedTime = 0
                 print("checkCrossingHighBolling => False: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedInterval))
 
         return False
@@ -393,15 +396,12 @@ class BitSignalFinder():
         crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
         # 上限突破した期間内にタッチしたかどうか
         if(self._hasBollUbed):
-            if(crntPrice > bollUbAll[TICK_NEWEST]):
+            if(crntPrice > bollUbAll[TICK_NEWEST] and self._crntUbedTime != crntTime):
                 print("******isBoll_UBed1:{}".format(crntTime))
                 self._bollUbedNum += 1
-
-            if(
-                # 2回以上タッチしたらUbした。
-                self._bollUbedNum > 3 and
-                self._crntUbedPrice != crntPrice
-            ):
+                self._crntUbedTime = crntTime
+            # 2回以上タッチしたらUbした。
+            if(self._bollUbedNum > 2):
                 print("******isBoll_UBed2:{}".format(crntTime))
                 return True
 

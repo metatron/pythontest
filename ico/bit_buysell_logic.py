@@ -111,7 +111,8 @@ class BitSignalFinder():
         self.checkCrossingLowBolling()
 
         #ゴールデンクロスチェック
-        self.checkGoldenXed_MacdH()
+        # self.checkGoldenXed_MacdH()
+        self.checkGoldenXed_MacdS()
 
         #バンド上抜け調査
         self.checkCrossingHighBolling()
@@ -146,8 +147,8 @@ class BitSignalFinder():
                     macdhAll[TICK_NEWEST] > macdhAll[-2] and macdhAll[-2] > macdhAll[-3] and
                     # ボリンジャーを用いた買いロジック
                     self._buyLogic_Boll_GX()
-                ) or
-
+                )
+                or
                 #バンドウォーク狙いロジック
                 (
                     #バンドの上を推移
@@ -179,7 +180,7 @@ class BitSignalFinder():
     def _buyLogic_Boll_GX(self):
         bollLbAll = self._stockstatClass.get('boll_lb')
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
-        print("_buyLogic_Boll_GX: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
+        # print("_buyLogic_Boll_GX: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
         if(
             #ボリンジャーLBが存在する
             math.isnan(bollLbAll[TICK_NEWEST]) == False and
@@ -354,21 +355,25 @@ class BitSignalFinder():
         highAll = self._stockstatClass.get('high')
         if(len(highAll) < 3):
             return False
+        bollUbAll = self._stockstatClass.get('boll_ub')
 
         tmpTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
         crntTime = int(str(tmpTime)[:12])
+        crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
 
         if(self._hasBollUbed == False):
-            self._hasBollUbed = True
-            self._bollUbedTime = crntTime
-            self._bollUbedInterval = 1
-            print("checkCrossingHighBolling => Begin: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedInterval))
+            #上抜いた時カウント始め
+            if(crntPrice - bollUbAll[TICK_NEWEST] > 0):
+                self._hasBollUbed = True
+                self._bollUbedTime = crntTime
+                self._bollUbedInterval = 1
+                print("checkCrossingHighBolling => Begin: {}, _bollUbedInterval:{}, bollUbedNum:{}".format(crntTime, self._bollUbedInterval, self._bollUbedNum))
 
         else:
             if(crntTime - self._bollUbedTime == 1):
                 self._bollUbedTime = crntTime
                 self._bollUbedInterval += 1
-                print("checkCrossingHighBolling => Update: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedInterval))
+                print("checkCrossingHighBolling => Update: {}, _bollUbedInterval:{}, bollUbedNum:{}".format(crntTime, self._bollUbedInterval, self._bollUbedNum))
 
             elif(self._bollUbedInterval >= GOLDENXED_INTERVAL):
                 self._hasBollUbed = False
@@ -376,7 +381,7 @@ class BitSignalFinder():
                 #上抜け回数の方もリセット
                 self._bollUbedNum = 0
                 self._crntUbedTime = 0
-                print("checkCrossingHighBolling => False: {}, _bollUbedNum:{}".format(crntTime, self._bollUbedInterval))
+                print("checkCrossingHighBolling => False: {}, _bollUbedInterval:{}, bollUbedNum:{}".format(crntTime, self._bollUbedInterval, self._bollUbedNum))
 
         return False
 
@@ -397,9 +402,9 @@ class BitSignalFinder():
         # 上限突破した期間内にタッチしたかどうか
         if(self._hasBollUbed):
             if(crntPrice > bollUbAll[TICK_NEWEST] and self._crntUbedTime != crntTime):
-                print("******isBoll_UBed1:{}".format(crntTime))
                 self._bollUbedNum += 1
                 self._crntUbedTime = crntTime
+                print("******isBoll_UBed1:{}, bollUbedNum:{}".format(crntTime, self._bollUbedNum))
             # 2回以上タッチしたらUbした。
             if(self._bollUbedNum > 2):
                 print("******isBoll_UBed2:{}".format(crntTime))
@@ -441,7 +446,7 @@ class BitSignalFinder():
             return
 
         crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
-        print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdS[-2] - allMacdH[-2])))
+        # print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdS[-2] - allMacdH[-2])))
 
         if (
             len(allMacdH) > 2 and len(allMacdS) > 2 and
@@ -450,7 +455,7 @@ class BitSignalFinder():
             # 2番目はMacdSが低い
             allMacdS[-2] - allMacdH[-2] < 0
         ):
-            print("*************Xed!:{}".format(crntTime))
+            # print("*************Xed!:{}".format(crntTime))
             self._isGoldedXed = True
             crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
             self._goldedXedTime = int(str(crntTime)[:12])

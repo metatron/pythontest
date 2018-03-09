@@ -58,8 +58,12 @@ class BitFlyerController():
 
         self._code = code
 
+        self._initParams()
+
+
+    def _initParams(self):
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
-        self._tickFilePath = "./csv/tick_" + str(crntDateTime) + "_" + coin + ".csv"
+        self._tickFilePath = "./csv/tick_" + str(crntDateTime) + "_" + self._coin + ".csv"
 
         # ティックリスト
         # [時分秒,値段],...
@@ -79,7 +83,6 @@ class BitFlyerController():
         #注文番号リスト
         self._buyIdList = []
         self._sellIdList = []
-
 
 
 

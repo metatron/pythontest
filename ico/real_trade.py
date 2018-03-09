@@ -6,7 +6,7 @@ import time
 
 
 if __name__ == '__main__':
-    bitflyer = BitFlyerController()
+    bitflyer = BitFlyerController(key="", secret="")
     # bitflyer.initGraph()
 
     bitsignal = BitSignalFinder(bitflyer._tickList, bitflyer._candleStats)

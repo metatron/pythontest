@@ -38,6 +38,10 @@ GOLDENXED_INTERVAL = 4
 CANDLETYPE_POS = 0
 CANDLETYPE_NEG = 1
 
+# 500以上上昇
+SUDDEN_PRICE_UP = 500
+SUDDEN_PRICE_UP_INTERVAL = 3
+
 
 #status save
 STATUS_FILEPATH = './status.json'
@@ -91,6 +95,10 @@ class BitSignalFinder():
         self._bollUbedNum = 0
         self._crntUbedTime = 0
 
+        #500以上上昇したか
+        self._suddenPriceUp = False
+        self._suddenPriceTime = 0
+
 
         #ロスカット系
         self._isLossCut = False
@@ -116,6 +124,9 @@ class BitSignalFinder():
 
         #バンド上抜け調査
         self.checkCrossingHighBolling()
+
+        # 500以上上昇したか
+        self.checkSuddenPriceUp()
 
         # if(len(self._params) > 0):
         #     for param_ in self._params:
@@ -167,7 +178,7 @@ class BitSignalFinder():
 
             # 最低売り金額を算出
             self._sellPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, self._minEarn)[0]
-            print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}".format(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME], self._buyPrice, macdhAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice))
+            print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}, goldedXedTime:{}".format(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME], self._buyPrice, macdhAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice, self._goldedXedTime))
 
             self._saveStatus()
 
@@ -232,10 +243,11 @@ class BitSignalFinder():
 
         if(
             len(closeAll) > 2 and
-            #バンドの上抜け期間中
-            self._hasBollUbed and
+            # #バンドの上抜け期間中
             #上抜けした回数が規定より上回っている
-            self.isBoll_UBed()
+            self.isBoll_UBed() and
+            # 500以上上昇したことがある
+            self._suddenPriceUp
         ):
             print("***Buy logic:[_buyLogic_Boll_UB] crntPrice:{}, closeAll2:{}, highAll2:{}, bandratio:{}".format(crntPrice, closeAll[-2], highAll[-2], bandratio))
             return True
@@ -388,6 +400,7 @@ class BitSignalFinder():
 
     """
         バンド上限にタッチした期間かどうか
+        期間内に500以上値上がりしたかどうか
         4足目まで継続
     """
     def isBoll_UBed(self):
@@ -404,10 +417,11 @@ class BitSignalFinder():
             if(crntPrice > bollUbAll[TICK_NEWEST] and self._crntUbedTime != crntTime):
                 self._bollUbedNum += 1
                 self._crntUbedTime = crntTime
-                print("******isBoll_UBed1:{}, bollUbedNum:{}".format(crntTime, self._bollUbedNum))
+                # print("******isBoll_UBed1:{}, bollUbedNum:{}".format(crntTime, self._bollUbedNum))
+
             # 2回以上タッチしたらUbした。
-            if(self._bollUbedNum > 2):
-                print("******isBoll_UBed2:{}".format(crntTime))
+            if(self._bollUbedNum >= 2):
+                # print("******isBoll_UBed2:{}".format(crntTime))
                 return True
 
         return False
@@ -437,11 +451,13 @@ class BitSignalFinder():
     """
         ゴールデンクロスチェック（MacdとMacdS使用）
         時間、フラグ更新
-        最初反応がmacdhを使用していたが、反応が早すぎる事がある。macdとmacdsに変更
+        最初反応がmacdhを使用していたが、反応が早すぎる事がある。macdとmacdsに変更。
+        TICK_NEWESTはアップダウンが激しいため-2,-3で比較
     """
     def checkGoldenXed_MacdS(self):
         allMacdH = self._stockstatClass.get('macdh') # grey
         allMacdS = self._stockstatClass.get('macds') # yellow
+        allRsi = self._stockstatClass.get('rsi_9')
         if(len(allMacdH) <= 2):
             return
 
@@ -453,11 +469,10 @@ class BitSignalFinder():
             # macdの一番最新は確実に上回っている事
             allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST] > 0 and
             # 2番目はMacdSが低い
-            allMacdS[-2] - allMacdH[-2] < 0
+            allMacdH[-2] - allMacdS[-2] < 0
         ):
-            # print("*************Xed!:{}".format(crntTime))
+            print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdH[-2] - allMacdS[-2])))
             self._isGoldedXed = True
-            crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
             self._goldedXedTime = int(str(crntTime)[:12])
 
 
@@ -501,6 +516,32 @@ class BitSignalFinder():
             return True
 
         return False
+
+
+
+    """
+        過去（-2）のopen, closeが500以上上昇したかどうかチェック
+    """
+    def checkSuddenPriceUp(self):
+        closeAll = self._stockstatClass.get('close')
+        openAll = self._stockstatClass.get('open')
+
+        if(len(closeAll) < 2):
+            return
+
+        crntTime = int(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME])
+
+        # 期間スタート
+        if(self._suddenPriceUp == False and closeAll[TICK_NEWEST] - openAll[TICK_NEWEST] > SUDDEN_PRICE_UP):
+            # print("checkSuddenPriceUp: {}, diff:{}".format(crntTime, (closeAll[-2] - openAll[-2])))
+            self._suddenPriceUp = True
+            self._suddenPriceTime = crntTime
+
+        # 期間外になったらリセット
+        elif(crntTime - self._suddenPriceTime > SUDDEN_PRICE_UP_INTERVAL):
+            self._suddenPriceUp = False
+            self._suddenPriceTime = 0
+
 
 
     """

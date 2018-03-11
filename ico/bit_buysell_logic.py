@@ -137,8 +137,9 @@ class BitSignalFinder():
     def buySignal(self, dryRun=True):
         macdhAll = self._stockstatClass.get('macdh') # grey
         rsiAll = self._stockstatClass.get('rsi_9')
+        crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
         # if len(macdhAll) > 4 :
-        #     print("buySignal 1>2:{}, 2>3:{}".format((macdhAll[TICK_NEWEST] > macdhAll[-2]), (macdhAll[-2] > macdhAll[-3])))
+        #     print("buySignal {}, 1>2:{}, 2>3:{}".format(crntTime, (macdhAll[TICK_NEWEST] > macdhAll[-2]), (macdhAll[-2] > macdhAll[-3])))
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
 
         # if(self._tickDataList[TICK_NEWEST][0] == 20180228103158):
@@ -191,7 +192,8 @@ class BitSignalFinder():
     def _buyLogic_Boll_GX(self):
         bollLbAll = self._stockstatClass.get('boll_lb')
         scaledPrice = self._scaler.transform(self._tickDataList[TICK_NEWEST][1])[0][0]
-        # print("_buyLogic_Boll_GX: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
+        crntTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
+        print("_buyLogic_Boll_GX {}: hasLB:{}, aboveLB:{}, isX:{}, rsi:{}, scaledprice:{}".format(crntTime, self._hasLowerBollLb, self.isAboveLowBoll(), self.stillGoldenXed(), self._stockstatClass.get('rsi_9')[TICK_NEWEST], scaledPrice))
         if(
             #ボリンジャーLBが存在する
             math.isnan(bollLbAll[TICK_NEWEST]) == False and
@@ -210,7 +212,7 @@ class BitSignalFinder():
             math.isnan(self._stockstatClass.get('rsi_9')[TICK_NEWEST]) == False and
             self._stockstatClass.get('rsi_9')[TICK_NEWEST] < 60.0 and
 
-            # 高値の時は買わない
+            # 高値の時は買わない（0.25? 0.44?）
             scaledPrice < 0.25 and
             # 0に行くとさらに下がる可能性があるので
             scaledPrice > 0.05
@@ -229,7 +231,7 @@ class BitSignalFinder():
         highAll = self._stockstatClass.get('high')
         closeAll = self._stockstatClass.get('close')
         rsiAll = self._stockstatClass.get('rsi_9')
-        macdsAll = self._stockstatClass.get('macd') # orange
+        macdAll = self._stockstatClass.get('macd') # orange
         macdsAll = self._stockstatClass.get('macds') # yellow
         crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
 
@@ -339,7 +341,7 @@ class BitSignalFinder():
             self._stockstatClass.get('low')[TICK_NEWEST] > 0.0
 
         ):
-            # print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self._tickDataList[TICK_NEWEST][0], self._stockstatClass.get('low')[TICK_NEWEST], self._stockstatClass.get('boll_lb')[TICK_NEWEST]))
+            print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self._tickDataList[TICK_NEWEST][0], self._stockstatClass.get('low')[TICK_NEWEST], self._stockstatClass.get('boll_lb')[TICK_NEWEST]))
             self._bollLBXPrice = self._stockstatClass.get('low')[TICK_NEWEST]
             self._possibleSellPrice = self._bollLBXPrice + 3
             self._hasLowerBollLb = True
@@ -588,9 +590,6 @@ class BitSignalFinder():
         最低限の売値の値段を返す
     """
     def decideLossCut(self):
-        if(self._isLossCut):
-            return 0
-
         if(self._sellPrice <= 0):
             return 0
 
@@ -601,6 +600,40 @@ class BitSignalFinder():
         if(crntDateTime - boughtDateTime < 3):
             return 0
 
+
+        macdhAll = self._stockstatClass.get('macdh') # grey
+        macdAll = self._stockstatClass.get('macd') # orange
+        macdsAll = self._stockstatClass.get('macds') # yellow
+        crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
+        # 第二段階 第一段階後かつデッドクロス = 即売り
+        if(
+            self._isLossCut == True and
+            macdAll[-2] - macdsAll[-2] > 0 and
+            macdAll[TICK_NEWEST] - macdsAll[TICK_NEWEST] < 0
+        ):
+            oldSellPrice = self._sellPrice
+            self._sellPrice = crntPrice
+            print("***LosCut Lv2! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
+            self._saveStatus()
+            return 0
+
+
+        # 第最終段階
+        # 第一段階後かつ2万以上差がついた = 即売り
+        if (self._isLossCut == True and crntPrice - self._buyPrice <= -20000.0):
+            oldSellPrice = self._sellPrice
+            self._sellPrice = crntPrice
+            print("***LosCut Lv3! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
+            self._saveStatus()
+            return 0
+
+
+        # 第一段階
+        if(self._isLossCut):
+            return 0
+
+
+        oldSellPrice = self._sellPrice
         bandlist = self._getBandBolaRatio()
         if(
             # 順当に上がっていない
@@ -608,24 +641,21 @@ class BitSignalFinder():
             #3足で1%以上の上昇をしていない
             bandlist[TICK_NEWEST] - bandlist[-3] < 0.001
         ):
-            oldSellPrice = self._sellPrice
             # 最低限の売り値取得（0.5円以上の利益をだす）
             lowestPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, 0.5)[0]
             # 現在の値段の方が高かったらそっちを使用
-            crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
             if(crntPrice > lowestPrice):
                 self._sellPrice = crntPrice
             else:
                 self._sellPrice = lowestPrice
 
 
-            self._isLossCut = True
-            print("***LosCut! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
+        self._isLossCut = True
+        print("***LosCut Lv1! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
 
-            self._saveStatus()
+        self._saveStatus()
 
-            return self._sellPrice
-
+        return self._sellPrice
 
     def getCandleType(self, timePrev=TICK_NEWEST):
         highAll = self._stockstatClass.get('high')

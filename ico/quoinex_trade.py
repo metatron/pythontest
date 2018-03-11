@@ -34,11 +34,12 @@ class QuoinexController(BitFlyerController):
     :param secret
     :param code 2段階認証
     """
-    def __init__(self, coin="BTC_JPY", key="", secret="", code=""):
-        super().__init__(self, coin, key, secret)
+    def __init__(self, coin="BTC_JPY", tokenId=5, key="", secret="", code=""):
+        super().__init__(coin, key, secret)
 
         self._data = json.dumps({"product_code":coin}).encode("utf-8")
         self._url = "https://api.quoine.com"
+        self.token_id = tokenId
 
         # prep headers
         auth_payload = {
@@ -54,11 +55,29 @@ class QuoinexController(BitFlyerController):
             'Content-Type': 'application/json'
         }
 
-
         self._code = code
-
         self._initParams()
 
 
+    """
+        トレードの種類取得。
+        (BTCJPYはID 5)
+        ask: 売り
+        bid: 買い
+    """
+    def getProducts(self):
+        path = "/products"
+        resultJson = self._getRequestData(path)
+        print(json.dumps(resultJson))
 
+    def getTickData(self):
+        path = "/products/5"
+        resultJson = self._getRequestData(path)
+        self._addToTickList(resultJson["market_bid"], resultJson['volume_24h'])
+        self._convertTickDataToCandle(self._tickList)
+
+
+if __name__ == '__main__':
+    quoinex = QuoinexController()
+    quoinex.getProducts()
 

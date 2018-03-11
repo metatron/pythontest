@@ -16,7 +16,9 @@ if __name__ == '__main__':
         bitflyer.getTickData()
         stockstatsClass = bitflyer.convertToStockStats()
         print(bitflyer._tickList[-1])
+
         bitsignal.update(bitflyer._tickList, stockstatsClass)
+        bitsignal.decideLossCut()
         bitsignal.buySignal()
         bitsignal.sellSignal()
 

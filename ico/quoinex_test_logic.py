@@ -9,9 +9,9 @@ if __name__ == '__main__':
     quoinex = QuoinexController()
     # quoinex.initGraph()
 
-    bitsignal = BitSignalFinder(quoinex._tickList, quoinex._candleStats)
+    bitsignal = BitSignalFinder(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
 
-    tickFilePath = "./csv/tick_201803111244_BTC_JPY.csv"
+    tickFilePath = "./csv/tick_201803131014_BTC_JPY.csv"
     df = pd.read_csv(tickFilePath)
     tmpList = df.values.tolist()
     for tick in tmpList:

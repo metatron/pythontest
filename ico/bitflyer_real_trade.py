@@ -9,7 +9,7 @@ if __name__ == '__main__':
     bitflyer = BitFlyerController(key="", secret="")
     # bitflyer.initGraph()
 
-    bitsignal = BitSignalFinder(bitflyer._tickList, bitflyer._candleStats)
+    bitsignal = BitSignalFinder(bitflyer._tickList, bitflyer._candleStats, [0.0015, 0.0014])
 
     index=0
     while(index<10):

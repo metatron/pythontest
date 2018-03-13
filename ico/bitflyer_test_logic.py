@@ -9,7 +9,7 @@ if __name__ == '__main__':
     bitflyer = BitFlyerController()
     # bitflyer.initGraph()
 
-    bitsignal = BitSignalFinder(bitflyer._tickList, bitflyer._candleStats)
+    bitsignal = BitSignalFinder(bitflyer._tickList, bitflyer._candleStats, [0.0015, 0.0014])
 
     tickFilePath = "./csv/tick_201802280959_BTC_JPY.csv"
     df = pd.read_csv(tickFilePath)

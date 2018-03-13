@@ -9,7 +9,7 @@ if __name__ == '__main__':
     quoinex = QuoinexController(key="", secret="")
     # quoinex.initGraph()
 
-    bitsignal = BitSignalFinder(quoinex._tickList, quoinex._candleStats)
+    bitsignal = BitSignalFinder(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
 
     index=0
     while(index<10):

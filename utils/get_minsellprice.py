@@ -8,20 +8,20 @@ return: [1コイン辺りの最低売り金額, 買いの時との差, 売らな
 """
 
 
-def getMinSellPrice(buyPrice, coinAmount=0.001, minEarn=1.0):
+def getMinSellPrice(buyPrice, coinAmount=0.001, minEarn=1.0, extraFreeList=[0.0, 0.0]):
     minAmount = 0.001
     buyPrice = float(buyPrice)
     coinAmount = float(coinAmount)
     minEarn = float(minEarn)
 
     # 10万円以下手数料
-    extraFee = 0.0015
+    extraFee = extraFreeList[0]
     # 実際に払った金額
     actualBuyPrice = buyPrice * coinAmount
 
     # 50万以下だったら0.14%
     if (actualBuyPrice > 100000.0 and actualBuyPrice <= 500000.0):
-        extraFee = 0.0014
+        extraFee = extraFreeList[1]
 
     # 0.01あたりに直す
     ratio = minAmount / coinAmount

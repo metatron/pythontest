@@ -8,6 +8,7 @@ import time
 import json
 import jwt
 import requests
+import datetime
 
 from ico.bitflyer_trade import BitFlyerController
 
@@ -58,6 +59,11 @@ class QuoinexController(BitFlyerController):
         self._code = code
         self._initParams()
 
+        crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
+        self._tickFilePath = "./csv/tick_quoinex_" + str(crntDateTime) + "_" + self._coin + ".csv"
+
+
+
 
     """
         トレードの種類取得。
@@ -75,6 +81,48 @@ class QuoinexController(BitFlyerController):
         resultJson = self._getRequestData(path)
         self._addToTickList(resultJson["market_bid"], resultJson['volume_24h'])
         self._convertTickDataToCandle(self._tickList)
+
+    """
+        売買注文を出す。
+
+        :param side "BUY", "SELL"
+        :param coinPrice 値段
+        :param size 個数
+        :param expireMin (Quoinexでは未使用）
+    """
+    def orderCoinRequest(self, side, coinPrice, size, expireMin=180):
+        if coinPrice == 0:
+            print("************ [orderCoinRequest] coinPrice is 0!")
+            return
+
+        if size == 0:
+            print("************ [orderCoinRequest] size is 0!")
+            return
+
+        if side == None:
+            print("************ [orderCoinRequest] side is None!")
+            return
+
+        params = {
+            "product_id": self.token_id,
+            "order_type": "limit",
+            "side": side,
+            "price": coinPrice,
+            "quantity": size,
+        }
+
+        path = "/orders"
+        resultJson = self._getRequestData(path, params)
+        if resultJson == None:
+            print("************ [orderCoinRequest] request Error!")
+            return
+
+        orderId = resultJson['id']
+        if orderId == None or orderId == "":
+            print("************ [orderCoinRequest] orderId Error!")
+            return
+
+        print("*** [orderCoinRequest] {} order sent. price:{}, size:{}".format(side, coinPrice, size))
 
 
 if __name__ == '__main__':

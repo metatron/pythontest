@@ -63,7 +63,7 @@ class BitFlyerController():
 
     def _initParams(self):
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
-        self._tickFilePath = "./csv/tick_" + str(crntDateTime) + "_" + self._coin + ".csv"
+        self._tickFilePath = "./csv/tick_bitflyer" + str(crntDateTime) + "_" + self._coin + ".csv"
 
         # ティックリスト
         # [時分秒,値段],...

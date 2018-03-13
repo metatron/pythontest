@@ -105,6 +105,11 @@ class BitFlyerController():
         self._addToTickList(resultJson['mid_price'])
         self._convertTickDataToCandle(self._tickList)
 
+    """
+        残高情報取得
+    """
+    def getBalance(self):
+        pass
 
     """
         売買注文を出す。

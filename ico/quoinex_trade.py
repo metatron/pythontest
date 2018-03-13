@@ -35,7 +35,7 @@ class QuoinexController(BitFlyerController):
     :param secret
     :param code 2段階認証
     """
-    def __init__(self, coin="BTC_JPY", tokenId=5, key="", secret="", code=""):
+    def __init__(self, coin="BTC_JPY", tokenId="", key="", secret="", code=""):
         super().__init__(coin, key, secret)
 
         self._data = json.dumps({"product_code":coin}).encode("utf-8")
@@ -50,7 +50,7 @@ class QuoinexController(BitFlyerController):
         }
         encoded_jwt = jwt.encode(auth_payload, secret, algorithm='HS256')
 
-        request_headers = {
+        self._headers = {
             'X-Quoine-API-Version': '2',
             'X-Quoine-Auth': encoded_jwt,
             'Content-Type': 'application/json'
@@ -76,11 +76,18 @@ class QuoinexController(BitFlyerController):
         resultJson = self._getRequestData(path)
         print(json.dumps(resultJson))
 
+
     def getTickData(self):
         path = "/products/5"
         resultJson = self._getRequestData(path)
         self._addToTickList(resultJson["market_bid"], resultJson['volume_24h'])
         self._convertTickDataToCandle(self._tickList)
+
+
+    def getBalance(self):
+        path = "/accounts/balance"
+        resultJson = self._getRequestData(path)
+        print(json.dumps(resultJson))
 
     """
         売買注文を出す。
@@ -104,11 +111,13 @@ class QuoinexController(BitFlyerController):
             return
 
         params = {
-            "product_id": self.token_id,
-            "order_type": "limit",
-            "side": side,
-            "price": coinPrice,
-            "quantity": size,
+            "order": {
+                "product_id": self.token_id,
+                "order_type": "limit",
+                "side": side,
+                "price": coinPrice,
+                "quantity": size,
+            }
         }
 
         path = "/orders"
@@ -126,6 +135,6 @@ class QuoinexController(BitFlyerController):
 
 
 if __name__ == '__main__':
-    quoinex = QuoinexController()
-    quoinex.getProducts()
+    quoinex = QuoinexController(tokenId="", secret="")
+    quoinex.getBalance()
 

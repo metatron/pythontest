@@ -156,7 +156,7 @@ class BitSignalFinder():
         # if(self._tickDataList[TICK_NEWEST][0] == 20180228103158):
         #     print("test")
 
-        crntPrice = self._tickDataList[TICK_NEWEST][1]
+        crntPrice = float(self._tickDataList[TICK_NEWEST][1])
         if(
             # 共通項目
             (
@@ -274,7 +274,7 @@ class BitSignalFinder():
         macdAll = self._stockstatClass.get('macd')
         rsiAll = self._stockstatClass.get('rsi_9')
 
-        crntPrice = self._tickDataList[TICK_NEWEST][1]
+        crntPrice = float(self._tickDataList[TICK_NEWEST][1])
         scaledPrice = self._scaler.transform(crntPrice)[0][0]
         if(
             self._buyNum > 0.0 and
@@ -409,7 +409,7 @@ class BitSignalFinder():
 
         if(self._hasBollUbed == False):
             #上抜いた時カウント始め
-            if(crntPrice - bollUbAll[TICK_NEWEST] > 0):
+            if(float(crntPrice) - float(bollUbAll[TICK_NEWEST]) > 0):
                 self._hasBollUbed = True
                 self._bollUbedTime = crntTime
                 self._bollUbedInterval = 1
@@ -445,10 +445,10 @@ class BitSignalFinder():
 
         tmpTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
         crntTime = int(str(tmpTime)[:12])
-        crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
+        crntPrice = float(self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE])
         # 上限突破した期間内にタッチしたかどうか
         if(self._hasBollUbed):
-            if(crntPrice > bollUbAll[TICK_NEWEST] and self._crntUbedTime != crntTime):
+            if(crntPrice > float(bollUbAll[TICK_NEWEST]) and self._crntUbedTime != crntTime):
                 self._bollUbedNum += 1
                 self._crntUbedTime = crntTime
                 # print("******isBoll_UBed1:{}, bollUbedNum:{}".format(crntTime, self._bollUbedNum))
@@ -665,12 +665,13 @@ class BitSignalFinder():
         macdhAll = self._stockstatClass.get('macdh') # grey
         macdAll = self._stockstatClass.get('macd') # orange
         macdsAll = self._stockstatClass.get('macds') # yellow
-        crntPrice = self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE]
+        crntPrice = float(self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE])
         # [第二段階]
         # 第一段階後
         # デッドクロス
         # LBをクロスしている
         if(
+            len(macdAll) > 2 and
             self._isLossCut == True and
             (macdAll[-2] - macdsAll[-2] > 0 and macdAll[TICK_NEWEST] - macdsAll[TICK_NEWEST] < 0) and
             self.checkCrossingLowBolling()
@@ -706,6 +707,7 @@ class BitSignalFinder():
         oldSellPrice = self._sellPrice
         bandlist = self._getBandBolaRatio()
         if(
+            len(bandlist) > 2 and
             # 順当に上がっていない
             (bandlist[TICK_NEWEST] > bandlist[-2] and bandlist[-2] > bandlist[-3]) == False and
             #3足で1%以上の上昇をしていない
@@ -736,10 +738,12 @@ class BitSignalFinder():
             return CANDLETYPE_NEG
 
         lowAll = self._stockstatClass.get('low')
+        crntPrice = float(self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE])
+        prevPrice = float(self._tickDataList[-2][TICK_PARAM_PRICE])
 
         # 現在のロウソクはまだできてないのでTickデータを使用
         if(timePrev == TICK_NEWEST):
-            if(self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE] - self._tickDataList[-2][TICK_PARAM_PRICE] > 0):
+            if(crntPrice - prevPrice > 0):
                 return CANDLETYPE_POS
             return CANDLETYPE_NEG
 
@@ -768,13 +772,13 @@ class BitSignalFinder():
     def _loadStatus(self):
         if(os.path.exists(STATUS_FILEPATH)):
             params = json.load(open(STATUS_FILEPATH))
-            self._buyPrice = params['buyPrice']
-            self._buyDateTime = params['buyDateTime']
-            self._sellPrice = params['sellPrice']
-            self._coinAmount = params['coinAmount']
-            self._minEarn = params['minEarn']
-            self._buyNum = params['buyNum']
-            self._isLossCut = params['isLossCut']
+            self._buyPrice = float(params['buyPrice'])
+            self._buyDateTime = float(params['buyDateTime'])
+            self._sellPrice = float(params['sellPrice'])
+            self._coinAmount = float(params['coinAmount'])
+            self._minEarn = float(params['minEarn'])
+            self._buyNum = float(params['buyNum'])
+            self._isLossCut = float(params['isLossCut'])
 
 
     def _deleteStatus(self):

@@ -35,28 +35,12 @@ class QuoinexController(BitFlyerController):
     :param secret
     :param code 2段階認証
     """
-    def __init__(self, coin="BTC_JPY", tokenId="", key="", secret="", code=""):
+    def __init__(self, coin="BTC_JPY", key="", secret="", code=""):
         super().__init__(coin, key, secret)
 
-        self._data = json.dumps({"product_code":coin}).encode("utf-8")
         self._url = "https://api.quoine.com"
-        self.token_id = tokenId
+        self.token_id = key
 
-        # prep headers
-        auth_payload = {
-            'path': self._url,
-            'nonce': str(int(time.time())),
-            'token_id': self.token_id
-        }
-        encoded_jwt = jwt.encode(auth_payload, secret, algorithm='HS256')
-
-        self._headers = {
-            'X-Quoine-API-Version': '2',
-            'X-Quoine-Auth': encoded_jwt,
-            'Content-Type': 'application/json'
-        }
-
-        self._code = code
         self._initParams()
 
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
@@ -88,6 +72,10 @@ class QuoinexController(BitFlyerController):
         path = "/accounts/balance"
         resultJson = self._getRequestData(path)
         print(json.dumps(resultJson))
+
+
+    def checkOrder(self):
+        pass
 
     """
         売買注文を出す。
@@ -121,7 +109,8 @@ class QuoinexController(BitFlyerController):
         }
 
         path = "/orders"
-        resultJson = self._getRequestData(path, params)
+        resultJson = self._getRequestData(path, params=params, getOrPost='post')
+
         if resultJson == None:
             print("************ [orderCoinRequest] request Error!")
             return
@@ -134,7 +123,41 @@ class QuoinexController(BitFlyerController):
         print("*** [orderCoinRequest] {} order sent. price:{}, size:{}".format(side, coinPrice, size))
 
 
+    def _getRequestData(self, path, params=None, getOrPost='get'):
+        # prep headers
+        auth_payload = {
+            'path': path,
+            'nonce': str(int(time.time())),
+            'token_id': self.token_id
+        }
+        encoded_jwt = jwt.encode(auth_payload, self._secret, algorithm='HS256')
+
+        self._headers = {
+            'X-Quoine-API-Version': '2',
+            'X-Quoine-Auth': encoded_jwt,
+            'Content-Type': 'application/json'
+        }
+
+        if(getOrPost == 'get'):
+            res = requests.get(self._url+path, headers=self._headers, params=params)
+        else:
+            res = requests.post(self._url + path, headers=self._headers, data=params)
+
+
+        if res.status_code == 200:
+            resultJson = json.loads(res.text)
+            return resultJson
+
+        return None
+
+
+
+
+
+
 if __name__ == '__main__':
-    quoinex = QuoinexController(tokenId="", secret="")
-    quoinex.getBalance()
+    quoinex = QuoinexController(key="", secret="")
+    # quoinex.getBalance()
+    quoinex.orderCoinRequest("buy", 977524, 0.001)
+
 

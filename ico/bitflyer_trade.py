@@ -57,6 +57,7 @@ class BitFlyerController():
         }
 
         self._code = code
+        self._secret = secret
 
         self._initParams()
 
@@ -109,6 +110,10 @@ class BitFlyerController():
         残高情報取得
     """
     def getBalance(self):
+        pass
+
+
+    def checkOrder(self):
         pass
 
     """

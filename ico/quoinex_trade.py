@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding=utf-8
+
 import json
 from datetime import datetime
 import hmac
@@ -100,7 +103,7 @@ class QuoinexController(BitFlyerController):
 
         params = {
             "order": {
-                "product_id": self.token_id,
+                "product_id": 5,
                 "order_type": "limit",
                 "side": side,
                 "price": coinPrice,
@@ -108,7 +111,9 @@ class QuoinexController(BitFlyerController):
             }
         }
 
-        path = "/orders"
+        params = json.dumps(params)
+
+        path = "/orders/"
         resultJson = self._getRequestData(path, params=params, getOrPost='post')
 
         if resultJson == None:
@@ -127,7 +132,7 @@ class QuoinexController(BitFlyerController):
         # prep headers
         auth_payload = {
             'path': path,
-            'nonce': str(int(time.time())),
+            'nonce': str(int(time.time()*1000)),
             'token_id': self.token_id
         }
         encoded_jwt = jwt.encode(auth_payload, self._secret, algorithm='HS256')
@@ -138,16 +143,18 @@ class QuoinexController(BitFlyerController):
             'Content-Type': 'application/json'
         }
 
+
         if(getOrPost == 'get'):
             res = requests.get(self._url+path, headers=self._headers, params=params)
         else:
-            res = requests.post(self._url + path, headers=self._headers, data=params)
+            res = requests.post(self._url+path, data=params, headers=self._headers)
 
 
         if res.status_code == 200:
             resultJson = json.loads(res.text)
             return resultJson
-
+        else:
+            print("Error Code:{}, Msg:{}".format(res.status_code, res.content))
         return None
 
 
@@ -158,6 +165,6 @@ class QuoinexController(BitFlyerController):
 if __name__ == '__main__':
     quoinex = QuoinexController(key="", secret="")
     # quoinex.getBalance()
-    quoinex.orderCoinRequest("buy", 977524, 0.001)
+    quoinex.orderCoinRequest("buy", 800000, 0.001)
 
 

@@ -7,11 +7,12 @@ import time
 
 if __name__ == '__main__':
     quoinex = QuoinexController(key="", secret="")
-    # quoinex.initGraph()
+    quoinex.initGraph()
 
     bitsignal = BitSignalFinder(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
 
     index=0
+    crntOrderId = ""
     while(index<10):
         try:
             quoinex.getTickData()
@@ -37,14 +38,19 @@ if __name__ == '__main__':
             buyPrice = lossCutPrice
 
         if(buyPrice > 0):
-            # orderId = quoinex.orderCoinRequest("buy", buyPrice, bitsignal._coinAmount)
-            orderId = "buyxxxxx"
-            bitsignal.updateStatus("buy", orderId)
+            crntOrderId = quoinex.orderCoinRequest("buy", buyPrice, bitsignal._coinAmount)
+            # crntOrderId = "buyxxxxx"
+            bitsignal.updateStatus("buy", crntOrderId)
 
         if(sellPrice > 0):
-            # orderId = quoinex.orderCoinRequest("sell", sellPrice, bitsignal._coinAmount)
-            orderId = "sellxxxxx"
-            bitsignal.updateStatus("sell", orderId)
+            crntOrderId = quoinex.orderCoinRequest("sell", sellPrice, bitsignal._coinAmount)
+            # crntOrderId = "sellxxxxx"
+            bitsignal.updateStatus("sell", crntOrderId)
+
+        if(crntOrderId != ""):
+            status = quoinex.checkOrder(crntOrderId)
+            if(status == "filled"):
+                crntOrderId = ""
 
 
         quoinex.writeTickList()

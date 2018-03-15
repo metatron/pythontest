@@ -143,6 +143,17 @@ class QuoinexController(BitFlyerController):
         return orderId
 
 
+    def autoBuy(self):
+        self.getTickData()
+        crntPrice = self._tickList[NEWEST_TICK_POS][TICK_POS_PRICE]
+        self.orderCoinRequest("buy", crntPrice, 0.001)
+
+
+    def autoSell(self):
+        self.getTickData()
+        crntPrice = self._tickList[NEWEST_TICK_POS][TICK_POS_PRICE]
+        self.orderCoinRequest("sell", crntPrice, 0.001)
+
 
     def _getRequestData(self, path, params=None, getOrPost='get'):
         # prep headers
@@ -181,8 +192,12 @@ if __name__ == '__main__':
     # quoinex.getBalance()
     # orderId = quoinex.orderCoinRequest("buy", 872052.0, 0.001)
     # quoinex.checkOrder(orderId)
-    # quoinex.orderCoinRequest("sell", 800000, 0.001)
+    quoinex.orderCoinRequest("sell", 874545, 0.001)
     # orderId = quoinex.orderCoinRequest("sell", 873052.0, 0.001)
     # quoinex.checkOrder(orderId)
+
+    # quoinex.autoBuy()
+    # quoinex.autoSell()
+    # quoinex.cancelOrder();
 
 

@@ -178,12 +178,13 @@ class BitSignalFinder():
                     # ボリンジャーを用いた買いロジック
                     self._buyLogic_Boll_GX()
                 )
-                or
-                #バンドウォーク狙いロジック
-                (
-                    #バンドの上を推移
-                    self._buyLogic_Boll_UB()
-                )
+                #　一旦OFF 2018/03/15
+                # or
+                # #バンドウォーク狙いロジック
+                # (
+                #     #バンドの上を推移
+                #     self._buyLogic_Boll_UB()
+                # )
             )
         ):
 
@@ -801,9 +802,11 @@ class BitSignalFinder():
 
     def updateStatus(self, side, orderId):
         if(side=="buy"):
-            self._buyOrderId = orderId
+            self._buyOrderId = str(orderId)
+            self._sellOrderId = ""
         elif (side == "sell"):
-            self._sellOrderId = orderId
+            self._sellOrderId = str(orderId)
+            self._buyOrderId = ""
 
         if(orderId):
             self._saveStatus()

@@ -113,8 +113,13 @@ class BitFlyerController():
         pass
 
 
-    def checkOrder(self):
+    def checkOrder(self, orderId):
         pass
+
+
+    def cancelOrder(self, orderId):
+        pass
+
 
     """
         売買注文を出す。

@@ -69,8 +69,15 @@ class BitSignalFinder():
         self._buyPrice = 0
         self._buyDateTime = None
 
+        # 取引所で買った際のID
+        self._buyOrderId = ""
+
         # 一番最後に売った時の値段
         self._sellPrice = 0
+
+        # 取引所で売った際のID
+        self._sellOrderId = ""
+
 
         #コイン個数（ディフォルト0.001）
         self._coinAmount = 0.001
@@ -192,11 +199,11 @@ class BitSignalFinder():
             self._sellPrice = self.getMinSellPrice(self._buyPrice, self._coinAmount, self._minEarn)[0]
             print("***Buy! {} price:{}, macd:{}, rsi:{}, self._sellPrice:{}, goldedXedTime:{}".format(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME], self._buyPrice, macdhAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._sellPrice, self._goldedXedTime))
 
-            self._saveStatus()
+            # self._saveStatus()
 
-            return True
+            return self._buyPrice
 
-        return False
+        return 0
 
 
 
@@ -290,9 +297,9 @@ class BitSignalFinder():
 
             # 売ったら指標パラメータリセット
             self.resetBuySellParams()
-            return True
+            return self._sellPrice
 
-        return False
+        return 0
 
 
 
@@ -628,6 +635,9 @@ class BitSignalFinder():
         self._bollUbedInterval = 0
         self._bollUbedNum = 0
 
+        self._buyOrderId = ""
+        self._sellOrderId = ""
+
         self._deleteStatus()
 
 
@@ -652,14 +662,14 @@ class BitSignalFinder():
     """
     def decideLossCut(self):
         if(self._sellPrice <= 0):
-            return 0
+            return [None, 0]
 
         # 分に直して比較。3分間のロウソクで確認
         crntDateTime = self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME]
         crntDateTime = int(str(crntDateTime)[:12])
         boughtDateTime = int(str(self._buyDateTime)[:12])
         if(crntDateTime - boughtDateTime < 3):
-            return 0
+            return [None, 0]
 
 
         macdhAll = self._stockstatClass.get('macdh') # grey
@@ -679,8 +689,8 @@ class BitSignalFinder():
             oldSellPrice = self._sellPrice
             self._sellPrice = crntPrice
             print("***LosCut Lv2! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
-            self._saveStatus()
-            return 0
+            # self._saveStatus()
+            return [self._buyOrderId, self._sellPrice]
 
 
         # 第最終段階
@@ -695,13 +705,13 @@ class BitSignalFinder():
             oldSellPrice = self._sellPrice
             self._sellPrice = crntPrice
             print("***LosCut Lv3! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
-            self._saveStatus()
-            return 0
+            # self._saveStatus()
+            return [self._buyOrderId, self._sellPrice]
 
 
         # 第一段階
         if(self._isLossCut):
-            return 0
+            return [None, 0]
 
 
         oldSellPrice = self._sellPrice
@@ -721,13 +731,12 @@ class BitSignalFinder():
             else:
                 self._sellPrice = lowestPrice
 
-
         self._isLossCut = True
         print("***LosCut Lv1! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
 
-        self._saveStatus()
+        # self._saveStatus()
 
-        return self._sellPrice
+        return [self._buyOrderId, self._sellPrice]
 
 
 
@@ -761,8 +770,9 @@ class BitSignalFinder():
             'coinAmount' : self._coinAmount,
             'minEarn': self._minEarn,
             'buyNum': self._buyNum,
-            'isLossCut': self._isLossCut
-
+            'isLossCut': self._isLossCut,
+            'buyOrderId': str(self._buyOrderId),
+            'sellOrderId': str(self._sellOrderId),
         }
 
         with open(STATUS_FILEPATH, 'w', encoding='utf-8') as outfile:
@@ -779,8 +789,21 @@ class BitSignalFinder():
             self._minEarn = float(params['minEarn'])
             self._buyNum = float(params['buyNum'])
             self._isLossCut = float(params['isLossCut'])
+            self._buyOrderId = str(params['buyOrderId'])
+            self._sellOrderId = str(params['sellOrderId'])
 
 
     def _deleteStatus(self):
         if (os.path.exists(STATUS_FILEPATH)):
             os.remove(STATUS_FILEPATH)
+
+
+
+    def updateStatus(self, side, orderId):
+        if(side=="buy"):
+            self._buyOrderId = orderId
+        elif (side == "sell"):
+            self._sellOrderId = orderId
+
+        if(orderId):
+            self._saveStatus()

@@ -18,9 +18,15 @@ if __name__ == '__main__':
         print(bitflyer._tickList[-1])
 
         bitsignal.update(bitflyer._tickList, stockstatsClass)
-        bitsignal.decideLossCut()
-        bitsignal.buySignal()
-        bitsignal.sellSignal()
+        [buyOrderId, lossCutPrice] = bitsignal.decideLossCut()
+        [buyPrice] = bitsignal.buySignal()
+        [sellPrice] = bitsignal.sellSignal()
+
+        if(buyPrice > 0):
+            bitsignal.updateStatus("buy", buyPrice)
+
+        if(sellPrice > 0):
+            bitsignal.updateStatus("sell", sellPrice)
 
         bitflyer.writeTickList()
 

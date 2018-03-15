@@ -77,8 +77,21 @@ class QuoinexController(BitFlyerController):
         print(json.dumps(resultJson))
 
 
-    def checkOrder(self):
-        pass
+    def checkOrder(self, orderId):
+        path = "/orders/{}".format(orderId)
+        resultJson = self._getRequestData(path)
+        status = resultJson['status']
+
+        print(json.dumps(resultJson))
+
+        return status
+
+
+    def cancelOrder(self, orderId):
+        path = "/orders/{}/cancel".format(orderId)
+        resultJson = self._getRequestData(path)
+        print(json.dumps(resultJson))
+
 
     """
         売買注文を出す。
@@ -91,15 +104,15 @@ class QuoinexController(BitFlyerController):
     def orderCoinRequest(self, side, coinPrice, size, expireMin=180):
         if coinPrice == 0:
             print("************ [orderCoinRequest] coinPrice is 0!")
-            return
+            return 0
 
         if size == 0:
             print("************ [orderCoinRequest] size is 0!")
-            return
+            return 0
 
         if side == None:
             print("************ [orderCoinRequest] side is None!")
-            return
+            return 0
 
         params = {
             "order": {
@@ -125,7 +138,10 @@ class QuoinexController(BitFlyerController):
             print("************ [orderCoinRequest] orderId Error!")
             return
 
-        print("*** [orderCoinRequest] {} order sent. price:{}, size:{}".format(side, coinPrice, size))
+        print("*** [orderCoinRequest] {} order sent. orderId:{}, price:{}, size:{}".format(side, orderId, coinPrice, size))
+
+        return orderId
+
 
 
     def _getRequestData(self, path, params=None, getOrPost='get'):
@@ -143,12 +159,10 @@ class QuoinexController(BitFlyerController):
             'Content-Type': 'application/json'
         }
 
-
         if(getOrPost == 'get'):
             res = requests.get(self._url+path, headers=self._headers, params=params)
         else:
             res = requests.post(self._url+path, data=params, headers=self._headers)
-
 
         if res.status_code == 200:
             resultJson = json.loads(res.text)
@@ -165,6 +179,10 @@ class QuoinexController(BitFlyerController):
 if __name__ == '__main__':
     quoinex = QuoinexController(key="", secret="")
     # quoinex.getBalance()
-    quoinex.orderCoinRequest("buy", 800000, 0.001)
+    # orderId = quoinex.orderCoinRequest("buy", 872052.0, 0.001)
+    # quoinex.checkOrder(orderId)
+    # quoinex.orderCoinRequest("sell", 800000, 0.001)
+    # orderId = quoinex.orderCoinRequest("sell", 873052.0, 0.001)
+    # quoinex.checkOrder(orderId)
 
 

@@ -6,13 +6,14 @@ import time
 
 
 if __name__ == '__main__':
-    quoinex = QuoinexController(key="", secret="")
+    quoinex = QuoinexController(key="423219", secret="TrovIrH1zUPVHATVhETQMb+M9+NkG1AyyAoTas4MEi+9JxjkH8hLEf/3ReHRqVVP2mMYoqX7RLXNMin8xFwV9w==")
     quoinex.initGraph()
 
     bitsignal = BitSignalFinder(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
 
     index=0
     crntOrderId = ""
+    side = ""
     while(index<10):
         try:
             quoinex.getTickData()
@@ -38,19 +39,22 @@ if __name__ == '__main__':
             buyPrice = lossCutPrice
 
         if(buyPrice > 0):
-            crntOrderId = quoinex.orderCoinRequest("buy", buyPrice, bitsignal._coinAmount)
-            # crntOrderId = "buyxxxxx"
-            bitsignal.updateStatus("buy", crntOrderId)
+            side = "buy"
+            crntOrderId = quoinex.orderCoinRequest(side, buyPrice, bitsignal._coinAmount)
+            bitsignal.updateStatus(side, crntOrderId)
 
         if(sellPrice > 0):
-            crntOrderId = quoinex.orderCoinRequest("sell", sellPrice, bitsignal._coinAmount)
-            # crntOrderId = "sellxxxxx"
-            bitsignal.updateStatus("sell", crntOrderId)
+            side = "sell"
+            crntOrderId = quoinex.orderCoinRequest(side, sellPrice, bitsignal._coinAmount)
+            bitsignal.updateStatus(side, crntOrderId)
 
         if(crntOrderId != ""):
             status = quoinex.checkOrder(crntOrderId)
-            if(status == "filled"):
+            if(status == "filled" and side == "sell"):
+                bitsignal.resetBuySellParams()
                 crntOrderId = ""
+                side = ""
+
 
 
         quoinex.writeTickList()

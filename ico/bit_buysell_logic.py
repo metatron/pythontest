@@ -297,7 +297,7 @@ class BitSignalFinder():
             print("***Sell! {} price:{}, macd:{}, rsi:{}, totalEarned:{}".format(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME], crntPrice, macdAll[TICK_NEWEST], rsiAll[TICK_NEWEST], self._totalEarned))
 
             # 売ったら指標パラメータリセット
-            self.resetBuySellParams()
+            # self.resetBuySellParams()
             return self._sellPrice
 
         return 0
@@ -804,9 +804,8 @@ class BitSignalFinder():
         if(side=="buy"):
             self._buyOrderId = str(orderId)
             self._sellOrderId = ""
+            self._saveStatus()
         elif (side == "sell"):
             self._sellOrderId = str(orderId)
             self._buyOrderId = ""
-
-        if(orderId):
             self._saveStatus()

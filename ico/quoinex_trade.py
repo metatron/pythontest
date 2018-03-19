@@ -188,7 +188,7 @@ class QuoinexController(BitFlyerController):
 
 
 if __name__ == '__main__':
-    quoinex = QuoinexController(key="423219", secret="TrovIrH1zUPVHATVhETQMb+M9+NkG1AyyAoTas4MEi+9JxjkH8hLEf/3ReHRqVVP2mMYoqX7RLXNMin8xFwV9w==")
+    quoinex = QuoinexController(key="", secret="")
     # quoinex.getBalance()
     # orderId = quoinex.orderCoinRequest("buy", 872052.0, 0.001)
     # quoinex.checkOrder(orderId)

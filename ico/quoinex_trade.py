@@ -192,9 +192,9 @@ if __name__ == '__main__':
     # quoinex.getBalance()
     # orderId = quoinex.orderCoinRequest("buy", 872052.0, 0.001)
     # quoinex.checkOrder(orderId)
-    # quoinex.orderCoinRequest("sell", 862223, 0.001)
+    # quoinex.orderCoinRequest("sell", 924925.59, 0.001)
     # orderId = quoinex.orderCoinRequest("sell", 873052.0, 0.001)
-    # quoinex.checkOrder(232363447)
+    # quoinex.checkOrder(235693402)
 
     # quoinex.autoBuy()
     # quoinex.autoSell()

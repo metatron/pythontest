@@ -53,7 +53,8 @@ class SimpleSignalFinder(BitSignalFinder):
         # あまりに早くトレードしはじめると危険（値がないから）
         self.canTrade = False
 
-        self._buySignalFlag = False
+        # 売買フラグ。これがONの場合売買する。
+        self._buySellSignalFlag = False
 
 
 
@@ -63,27 +64,27 @@ class SimpleSignalFinder(BitSignalFinder):
         self._stockstatClass = stockstatClass
 
         self.lowAll = self._stockstatClass.get('low')
-        self.crntLow = self.lowAll[TICK_NEWEST]
+        self.crntLow = float(self.lowAll[TICK_NEWEST])
 
         self.macdAll = self._stockstatClass.get('macd')   # orange
-        self.crntMacd = self.macdAll[TICK_NEWEST]
+        self.crntMacd = float(self.macdAll[TICK_NEWEST])
 
         self.macdHAll = self._stockstatClass.get('macdh') # grey
-        self.crntMacdH = self.macdHAll[TICK_NEWEST]
+        self.crntMacdH = float(self.macdHAll[TICK_NEWEST])
 
         self.macdSAll = self._stockstatClass.get('macds') # yellow
-        self.crntMacdS = self.macdSAll[TICK_NEWEST]
+        self.crntMacdS = float(self.macdSAll[TICK_NEWEST])
 
         self.rsiAll = self._stockstatClass.get('rsi_12')
-        self.crntRsi = self.rsiAll[TICK_NEWEST]
+        self.crntRsi = float(self.rsiAll[TICK_NEWEST])
 
         self.bollUbAll = self._stockstatClass.get('boll_ub')
-        self.crntBollUb = self.bollUbAll[TICK_NEWEST]
+        self.crntBollUb = float(self.bollUbAll[TICK_NEWEST])
 
         self.bollLbAll = self._stockstatClass.get('boll_lb')
-        self.crntBollLb = self.bollLbAll[TICK_NEWEST]
+        self.crntBollLb = float(self.bollLbAll[TICK_NEWEST])
 
-        self.prevPrice = self.crntPrice
+        self.prevPrice = float(self.crntPrice)
 
         self.crntPrice = float(self._tickDataList[TICK_NEWEST][TICK_PARAM_PRICE])
         self.crntTimeSec = float(self._tickDataList[TICK_NEWEST][TICK_PARAM_DATETIME])
@@ -99,8 +100,19 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     def buySignal(self, dryRun=True):
-        pass
+        if (
+            self.canTrade and
+            self._buyLogic_Boll_GX()
+        ):
 
+            print("***Buy! {} price:{}, macd:{}, rsi:{}, goldedXedTime:{}".format(self.crntTimeSec, self.crntPrice, self.crntMacd, self.crntRsi, self._goldedXedTime))
+            self._buyPrice = self.crntPrice
+            self._buyDateTime = self.crntTimeSec
+
+            self._buySellSignalFlag = True
+
+            return self._buyPrice
+        return 0
 
 
     def _buyLogic_Boll_GX(self):
@@ -114,7 +126,7 @@ class SimpleSignalFinder(BitSignalFinder):
             self.checkGoldenXedInterval() and
 
             # rsiに値が入っていること
-            self.crntRsi < 60.0
+            self.crntRsi <= 40.0
         ):
             print("***Buy logic:[_buyLogic_Boll_GX] True")
             return True
@@ -124,9 +136,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
     """
         ゴールデンクロスチェック（MacdH(grey)とMacdS(yellow)使用）
-        時間、フラグ更新
-        最初反応がmacdhを使用していたが、反応が早すぎる事がある。macdとmacdsに変更。
-        TICK_NEWESTはアップダウンが激しいため-2,-3で比較
+        時間更新
         
         updateで使用
     """
@@ -146,8 +156,8 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     """
-        ゴールデンクロス期間かどうか
-        4足目まで継続
+        ゴールデンクロスが起こったら一定期間ONにする。
+        4足目まで継続。
     """
     def checkGoldenXedInterval(self):
         # クロスした
@@ -203,4 +213,52 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     def sellSignal(self, dryRun=True):
-        pass
+        if(
+            self.canTrade and
+            self._buyNum > 0.0 and
+
+            # 売買フラグがON
+            self._buySellSignalFlag and
+            self._buyPrice > 0 and
+            self.crntPrice > self._buyPrice + 1.0
+        ):
+            self._buyNum -= 1
+            self._sellPrice = self.crntPrice
+            #利益算出
+            earnedVal = self._sellPrice - self._buyPrice
+            self._totalEarned += earnedVal
+            print("***Sell! {} price:{}, macd:{}, rsi:{}, totalEarned:{}".format(self.crntTimeSec, self._sellPrice, self.crntMacd, self.crntRsi, self._totalEarned))
+
+            return self._sellPrice
+
+        return 0
+
+
+
+    """
+        デッドクロスチェック（MacdH(grey)とMacdS(yellow)使用）
+        時間更新
+
+        updateで使用
+    """
+
+    def _checkDeadXed_MacdS(self):
+        # print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdS[-2] - allMacdH[-2])))
+
+        if (
+                self._goldedXedTime > 0 and
+                # 最新のmacdHがSよりも低い
+                self.crntMacdH - self.crntMacdS < 0 and
+                # 前回はmacdHが高い
+                self.macdHAll[-2] - self.macdSAll[-2] > 0
+        ):
+            print(
+                "_checkDeadXed_MacdS {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS),
+                                                                    (self.macdHAll[-2] - self.macdSAll[-2])))
+            self._goldedXedTime = 0
+            self._buySellSignalFlag = False
+            self._buyPrice = 0
+            self._sellPrice = 0
+            self._lowerBollLbTime = 0
+
+

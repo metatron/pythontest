@@ -96,39 +96,49 @@ class SimpleSignalFinder(BitSignalFinder):
         if(self.crntTimeMin - self.startTimeMin > INITIAL_INTERVAL):
             self.canTrade = True
 
+
         self._checkGoldenXed_MacdS()
+        self._buyLogic_Boll_GX()
 
 
     def buySignal(self, dryRun=True):
+        print("buySignal {} canTrade:{}, buyPrice:{}, sellbuyflg:{}".format(self.crntTimeSec, self.canTrade, self._buyPrice, self._buySellSignalFlag))
         if (
             self.canTrade and
-            self._buyLogic_Boll_GX()
+            self._buyPrice == 0 and
+            self._buySellSignalFlag
         ):
 
             print("***Buy! {} price:{}, macd:{}, rsi:{}, goldedXedTime:{}".format(self.crntTimeSec, self.crntPrice, self.crntMacd, self.crntRsi, self._goldedXedTime))
+            self._buyNum += 1
             self._buyPrice = self.crntPrice
             self._buyDateTime = self.crntTimeSec
-
-            self._buySellSignalFlag = True
 
             return self._buyPrice
         return 0
 
 
     def _buyLogic_Boll_GX(self):
+        # パラメータ更新があるのでとりあえず実行。結果を取得
+        xedLB = self.checkCrossingLowBollingInterval()
+        gXed = self.checkGoldenXedInterval()
+
+        # print("_buyLogic_Boll_GX {}: xedLB:{}, gXed:{}, rsi: {}".format(self.crntTimeSec, xedLB, gXed, self.crntRsi))
+
         if(
             #ボリンジャーLBを下回った事がある。
-            self.checkCrossingLowBollingInterval() and
+            xedLB and
             #今は上回っている
             self.isAboveLowBoll() and
 
             #ゴールデンクロス発生中
-            self.checkGoldenXedInterval() and
+            gXed and
 
             # rsiに値が入っていること
-            self.crntRsi <= 40.0
+            self.crntRsi <= 40.0 and
+            self.crntRsi > 0.0
         ):
-            print("***Buy logic:[_buyLogic_Boll_GX] True")
+            self._buySellSignalFlag = True
             return True
         return False
 
@@ -150,7 +160,7 @@ class SimpleSignalFinder(BitSignalFinder):
             # 2番目はMacdSが低い
             self.macdHAll[-2] - self.macdSAll[-2] < 0
         ):
-            print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS), (self.macdHAll[-2] - self.macdSAll[-2])))
+            print("goldedXedTime ON! {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS), (self.macdHAll[-2] - self.macdSAll[-2])))
             self._goldedXedTime = self.crntTimeMin
 
 
@@ -165,9 +175,9 @@ class SimpleSignalFinder(BitSignalFinder):
             # クロス期間内
             if((self.crntTimeMin - self._goldedXedTime) <= GOLDENXED_INTERVAL):
                 return True
-
-        else:
-            self._goldedXedTime = 0
+            else:
+                print("goldedXedTime OFF! {}".format(self.crntTimeSec))
+                self._goldedXedTime = 0
 
         return False
 
@@ -198,15 +208,17 @@ class SimpleSignalFinder(BitSignalFinder):
         ):
             print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self.crntTimeSec, self.crntLow, self.crntBollLb))
             self._lowerBollLbTime = self.crntTimeMin
-            return True
 
 
-        if(self._lowerBollLbTime > 0 and self.crntTimeMin - self._lowerBollLbTime > LBED_INTERVAL):
-            print("Crossed LB RESET!: time:{}, low:{}, boll_lb:{},".format(self.crntTimeSec, self.crntLow, self.crntBollLb))
-            self._lowerBollLbTime = 0
+        if(self._lowerBollLbTime > 0):
+            if(self.crntTimeMin - self._lowerBollLbTime > LBED_INTERVAL):
+                print("Crossed LB RESET!: time:{}, low:{}, boll_lb:{},".format(self.crntTimeSec, self.crntLow, self.crntBollLb))
+                self._lowerBollLbTime = 0
+                return False
+            else:
+                return True
 
         return False
-
 
 
 
@@ -229,6 +241,9 @@ class SimpleSignalFinder(BitSignalFinder):
             self._totalEarned += earnedVal
             print("***Sell! {} price:{}, macd:{}, rsi:{}, totalEarned:{}".format(self.crntTimeSec, self._sellPrice, self.crntMacd, self.crntRsi, self._totalEarned))
 
+            # Buyを行う為のリセット
+            self.resetParamsForBuy()
+
             return self._sellPrice
 
         return 0
@@ -246,11 +261,18 @@ class SimpleSignalFinder(BitSignalFinder):
         # print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdS[-2] - allMacdH[-2])))
 
         if (
+            self.canTrade and
+            (
                 self._goldedXedTime > 0 and
                 # 最新のmacdHがSよりも低い
                 self.crntMacdH - self.crntMacdS < 0 and
                 # 前回はmacdHが高い
                 self.macdHAll[-2] - self.macdSAll[-2] > 0
+            ) or
+            (
+                # 3回連続macdH下落
+                self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3]
+            )
         ):
             print(
                 "_checkDeadXed_MacdS {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS),
@@ -262,3 +284,11 @@ class SimpleSignalFinder(BitSignalFinder):
             self._lowerBollLbTime = 0
 
 
+    """
+        再びBuyを行う為のリセット
+    """
+    def resetParamsForBuy(self):
+        self._buyPrice = 0
+        self._sellPrice = 0
+
+        self._deleteStatus()

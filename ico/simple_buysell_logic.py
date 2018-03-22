@@ -63,6 +63,9 @@ class SimpleSignalFinder(BitSignalFinder):
         self._tickDataList = tickDataList
         self._stockstatClass = stockstatClass
 
+        self.openAll = self._stockstatClass.get('open')
+        self.crntOpen = float(self.openAll[TICK_NEWEST])
+
         self.lowAll = self._stockstatClass.get('low')
         self.crntLow = float(self.lowAll[TICK_NEWEST])
 
@@ -102,11 +105,15 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     def buySignal(self, dryRun=True):
-        print("buySignal {} canTrade:{}, buyPrice:{}, sellbuyflg:{}".format(self.crntTimeSec, self.canTrade, self._buyPrice, self._buySellSignalFlag))
+        # print("buySignal {} canTrade:{}, buyPrice:{}, sellbuyflg:{}".format(self.crntTimeSec, self.canTrade, self._buyPrice, self._buySellSignalFlag))
         if (
             self.canTrade and
             self._buyPrice == 0 and
-            self._buySellSignalFlag
+            self._buySellSignalFlag and
+
+            # rsiが下記以下で連続買いが走る。
+            self.crntRsi <= 75.0 and
+            self.crntRsi > 0.0
         ):
 
             print("***Buy! {} price:{}, macd:{}, rsi:{}, goldedXedTime:{}".format(self.crntTimeSec, self.crntPrice, self.crntMacd, self.crntRsi, self._goldedXedTime))
@@ -258,18 +265,23 @@ class SimpleSignalFinder(BitSignalFinder):
     """
 
     def _checkDeadXed_MacdS(self):
-        # print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdS[-2] - allMacdH[-2])))
+        if(len(self.macdHAll) > 3):
+            print("checkGoldenXed_MacdS {} canTrade:{}, _buySellSignalFlag:{}, _buyPrice:{}, macdDiff:{}".format(self.crntTimeSec, self.canTrade, self._buySellSignalFlag, self._buyPrice, (self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3])))
 
         if (
             self.canTrade and
+            self._buySellSignalFlag and
+            self._buyPrice == 0 and
+            # (
+            #     len(self.macdHAll) > 3 and
+            #     self._goldedXedTime > 0 and
+            #     # 最新のmacdHがSよりも低い
+            #     self.crntMacdH - self.crntMacdS < 0 and
+            #     # 前回はmacdHが高い
+            #     self.macdHAll[-2] - self.macdSAll[-2] > 0
+            # ) or
             (
-                self._goldedXedTime > 0 and
-                # 最新のmacdHがSよりも低い
-                self.crntMacdH - self.crntMacdS < 0 and
-                # 前回はmacdHが高い
-                self.macdHAll[-2] - self.macdSAll[-2] > 0
-            ) or
-            (
+                len(self.macdHAll) > 3 and
                 # 3回連続macdH下落
                 self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3]
             )
@@ -282,6 +294,12 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buyPrice = 0
             self._sellPrice = 0
             self._lowerBollLbTime = 0
+
+
+    def checkSupriseDrop(self):
+        if(self.crntPrice - self.crntOpen < 1000.0):
+            return True
+        return False
 
 
     """

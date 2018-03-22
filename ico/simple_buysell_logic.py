@@ -237,7 +237,7 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buyNum > 0.0 and
 
             # 売買フラグがON
-            self._buySellSignalFlag and
+            # self._buySellSignalFlag and
             self._buyPrice > 0 and
             self.crntPrice > self._buyPrice + 1.0
         ):
@@ -266,7 +266,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
     def _checkDeadXed_MacdS(self):
         if(len(self.macdHAll) > 3):
-            print("checkGoldenXed_MacdS {} canTrade:{}, _buySellSignalFlag:{}, _buyPrice:{}, macdDiff:{}".format(self.crntTimeSec, self.canTrade, self._buySellSignalFlag, self._buyPrice, (self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3])))
+            print("_checkDeadXed_MacdS {} canTrade:{}, _buySellSignalFlag:{}, _buyPrice:{}, macdDiff:{}".format(self.crntTimeSec, self.canTrade, self._buySellSignalFlag, self._buyPrice, (self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3])))
 
         if (
             self.canTrade and

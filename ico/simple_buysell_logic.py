@@ -271,7 +271,6 @@ class SimpleSignalFinder(BitSignalFinder):
         if (
             self.canTrade and
             self._buySellSignalFlag and
-            self._buyPrice == 0 and
             # (
             #     len(self.macdHAll) > 3 and
             #     self._goldedXedTime > 0 and
@@ -284,11 +283,13 @@ class SimpleSignalFinder(BitSignalFinder):
                 len(self.macdHAll) > 3 and
                 # 3回連続macdH下落
                 self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3]
+            ) or
+            (
+                #ガラの際は買わない
+                len(self.macdHAll) > 3 and
+                self.checkSupriseDrop()
             )
-        ):
-            print(
-                "_checkDeadXed_MacdS {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS),
-                                                                    (self.macdHAll[-2] - self.macdSAll[-2])))
+            ):
             self._goldedXedTime = 0
             self._buySellSignalFlag = False
             self._buyPrice = 0
@@ -296,8 +297,15 @@ class SimpleSignalFinder(BitSignalFinder):
             self._lowerBollLbTime = 0
 
 
+    """
+        1000円以上ドロップしたらやばげ
+    """
     def checkSupriseDrop(self):
-        if(self.crntPrice - self.crntOpen < 1000.0):
+        if(
+            (self.crntPrice > 0 and self.crntOpen > 0) and
+            self.crntPrice - self.crntOpen < -1000.0
+        ):
+            print("**********suddenDrop!! self.crntPrice: {}, self.crntOpen:{}".format(self.crntPrice, self.crntOpen))
             return True
         return False
 
@@ -310,3 +318,7 @@ class SimpleSignalFinder(BitSignalFinder):
         self._sellPrice = 0
 
         self._deleteStatus()
+
+
+#TODO デッドクロス、ロスカット実装
+#TODO Buyが約定しないときのキャンセル実装

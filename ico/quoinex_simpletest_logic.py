@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     simplesingal = SimpleSignalFinder(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
 
-    tickFilePath = "./csv/tick_201803052343_BTC_JPY.csv"
+    tickFilePath = "./csv/tick_quoinex_201803141201_BTC_JPY.csv"
     df = pd.read_csv(tickFilePath)
     tmpList = df.values.tolist()
     for tick in tmpList:

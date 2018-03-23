@@ -198,6 +198,6 @@ if __name__ == '__main__':
 
     # quoinex.autoBuy()
     # quoinex.autoSell()
-    # quoinex.cancelOrder();
+    quoinex.cancelOrder(237219269);
 
 

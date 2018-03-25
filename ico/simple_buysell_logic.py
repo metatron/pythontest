@@ -25,7 +25,7 @@ TICK_PARAM_PRICE = 1
 INITIAL_INTERVAL = 3
 
 # バンドが下抜けてからの有効期間（分）
-LBED_INTERVAL = 4
+LBED_INTERVAL = 5
 
 # GXしたかどうか
 GOLDENXED_INTERVAL = 4
@@ -105,7 +105,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     def buySignal(self, dryRun=True):
-        # print("buySignal {} canTrade:{}, buyPrice:{}, sellbuyflg:{}".format(self.crntTimeSec, self.canTrade, self._buyPrice, self._buySellSignalFlag))
+        print("buySignal {} canTrade:{}, buyPrice:{}, sellbuyflg:{}, rsi:{}".format(self.crntTimeSec, self.canTrade, self._buyPrice, self._buySellSignalFlag, self.crntRsi))
         if (
             self.canTrade and
             self._buyPrice == 0 and
@@ -125,12 +125,16 @@ class SimpleSignalFinder(BitSignalFinder):
         return 0
 
 
+    """
+        BuySellフラグをONにする。
+        これがONだとBuyが走る
+    """
     def _buyLogic_Boll_GX(self):
         # パラメータ更新があるのでとりあえず実行。結果を取得
         xedLB = self.checkCrossingLowBollingInterval()
         gXed = self.checkGoldenXedInterval()
 
-        # print("_buyLogic_Boll_GX {}: xedLB:{}, gXed:{}, rsi: {}".format(self.crntTimeSec, xedLB, gXed, self.crntRsi))
+        # print("_buyLogic_Boll_GX {}: xedLB:{}, gXed:{}, isAbove:{}, rsi:{}".format(self.crntTimeSec, xedLB, gXed, self.isAboveLowBoll(), self.crntRsi))
 
         if(
             #ボリンジャーLBを下回った事がある。
@@ -239,7 +243,7 @@ class SimpleSignalFinder(BitSignalFinder):
             # 売買フラグがON
             # self._buySellSignalFlag and
             self._buyPrice > 0 and
-            self.crntPrice > self._buyPrice + 1.0
+            self.crntPrice > self._buyPrice + 1000.0
         ):
             self._buyNum -= 1
             self._sellPrice = self.crntPrice
@@ -249,7 +253,7 @@ class SimpleSignalFinder(BitSignalFinder):
             print("***Sell! {} price:{}, macd:{}, rsi:{}, totalEarned:{}".format(self.crntTimeSec, self._sellPrice, self.crntMacd, self.crntRsi, self._totalEarned))
 
             # Buyを行う為のリセット
-            self.resetParamsForBuy()
+            # self.resetParamsForBuy()
 
             return self._sellPrice
 
@@ -265,8 +269,8 @@ class SimpleSignalFinder(BitSignalFinder):
     """
 
     def _checkDeadXed_MacdS(self):
-        if(len(self.macdHAll) > 3):
-            print("_checkDeadXed_MacdS {} canTrade:{}, _buySellSignalFlag:{}, _buyPrice:{}, macdDiff:{}".format(self.crntTimeSec, self.canTrade, self._buySellSignalFlag, self._buyPrice, (self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3])))
+        # if(len(self.macdHAll) > 3):
+        #     print("_checkDeadXed_MacdS {} canTrade:{}, _buySellSignalFlag:{}, _buyPrice:{}, macdDiff:{}".format(self.crntTimeSec, self.canTrade, self._buySellSignalFlag, self._buyPrice, (self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3])))
 
         if (
             self.canTrade and
@@ -283,18 +287,20 @@ class SimpleSignalFinder(BitSignalFinder):
                 len(self.macdHAll) > 3 and
                 # 3回連続macdH下落
                 self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3]
-            ) or
-            (
-                #ガラの際は買わない
-                len(self.macdHAll) > 3 and
-                self.checkSupriseDrop()
             )
+            # or
+            # (
+            #     #ガラの際は買わない
+            #     len(self.macdHAll) > 3 and
+            #     self.checkSupriseDrop()
+            # )
             ):
             self._goldedXedTime = 0
             self._buySellSignalFlag = False
-            self._buyPrice = 0
-            self._sellPrice = 0
             self._lowerBollLbTime = 0
+            #Sellする特に規制しない
+            # self._buyPrice = 0
+            # self._sellPrice = 0
 
 
     """
@@ -303,9 +309,9 @@ class SimpleSignalFinder(BitSignalFinder):
     def checkSupriseDrop(self):
         if(
             (self.crntPrice > 0 and self.crntOpen > 0) and
-            self.crntPrice - self.crntOpen < -1000.0
+            self.crntPrice - self.crntOpen < -2000.0
         ):
-            print("**********suddenDrop!! self.crntPrice: {}, self.crntOpen:{}".format(self.crntPrice, self.crntOpen))
+            print("**********suddenDrop!! {} self.crntPrice: {}, self.crntOpen:{}".format(self.crntTimeSec, self.crntPrice, self.crntOpen))
             return True
         return False
 

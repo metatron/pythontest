@@ -5,6 +5,8 @@ import numpy as np
 import time
 
 
+MAX_RETRY_COUNT = 100
+
 if __name__ == '__main__':
     quoinex = QuoinexController(key="", secret="")
     quoinex.initGraph()
@@ -14,6 +16,7 @@ if __name__ == '__main__':
     index=0
     crntOrderId = ""
     side = ""
+    retryCount = 0
     while(index<10):
         try:
             quoinex.getTickData()
@@ -30,13 +33,10 @@ if __name__ == '__main__':
         print(quoinex._tickList[-1])
 
         simplesingal.update(quoinex._tickList, stockstatsClass)
-        [buyOrderId, lossCutPrice] = simplesingal.decideLossCut()
+        # simplesingal.decideLossCut()
         buyPrice = simplesingal.buySignal()
         sellPrice = simplesingal.sellSignal()
-
-        if(buyOrderId != None and lossCutPrice > 0):
-            quoinex.cancelOrder(buyOrderId)
-            buyPrice = lossCutPrice
+        simplesingal._checkDeadXed_MacdS()
 
         if(buyPrice > 0):
             side = "buy"
@@ -50,10 +50,18 @@ if __name__ == '__main__':
 
         if(crntOrderId != ""):
             status = quoinex.checkOrder(crntOrderId)
-            if(status == "filled" and side == "sell"):
-                simplesingal.resetBuySellParams()
+            if(status == "filled"):
+                if(side == "sell"):
+                    simplesingal.resetParamsForBuy()
                 crntOrderId = ""
                 side = ""
+                retryCount = 0
+            elif(status == "live"):
+                retryCount += 1
+
+            if(retryCount >= MAX_RETRY_COUNT):
+                quoinex.cancelOrder(crntOrderId)
+
 
 
 

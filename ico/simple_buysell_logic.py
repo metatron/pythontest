@@ -101,6 +101,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
         self._checkGoldenXed_MacdS()
+        self._checkGoldenXed_Macd() #上で検知できなかった場合有用
         self._buyLogic_Boll_GX()
 
 
@@ -137,8 +138,8 @@ class SimpleSignalFinder(BitSignalFinder):
         # print("_buyLogic_Boll_GX {}: xedLB:{}, gXed:{}, isAbove:{}, rsi:{}".format(self.crntTimeSec, xedLB, gXed, self.isAboveLowBoll(), self.crntRsi))
 
         if(
-            #ボリンジャーLBを下回った事がある。
-            xedLB and
+            # #ボリンジャーLBを下回った事がある。
+            # xedLB and
             #今は上回っている
             self.isAboveLowBoll() and
 
@@ -174,6 +175,26 @@ class SimpleSignalFinder(BitSignalFinder):
             print("goldedXedTime ON! {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS), (self.macdHAll[-2] - self.macdSAll[-2])))
             self._goldedXedTime = self.crntTimeMin
 
+    """
+        ゴールデンクロスチェック（macd(orange)とMacdS(yellow)使用）
+        時間更新
+
+        updateで使用
+    """
+
+    def _checkGoldenXed_Macd(self):
+        # print("checkGoldenXed_MacdS {} macd1:{}, macd2:{}".format(crntTime, (allMacdH[TICK_NEWEST] - allMacdS[TICK_NEWEST]), (allMacdS[-2] - allMacdH[-2])))
+
+        if (
+                self._goldedXedTime == 0 and
+                # macdの一番最新は確実に上回っている事
+                self.crntMacd - self.crntMacdS > 0 and
+                # 2番目はMacdSが低い
+                self.macdAll[-2] - self.macdSAll[-2] < 0
+        ):
+            print("goldedXedTime ON! (2nd) {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS),
+                                                                   (self.macdHAll[-2] - self.macdSAll[-2])))
+            self._goldedXedTime = self.crntTimeMin
 
 
     """

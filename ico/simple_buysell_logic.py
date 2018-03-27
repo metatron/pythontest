@@ -96,7 +96,8 @@ class SimpleSignalFinder(BitSignalFinder):
         if(self.startTimeMin == 0):
             self.startTimeMin = self.crntTimeMin
 
-        if(self.crntTimeMin - self.startTimeMin > INITIAL_INTERVAL):
+        _diff = self._timeMinDiff(self.crntTimeMin, self.startTimeMin)
+        if(_diff > INITIAL_INTERVAL):
             self.canTrade = True
 
 
@@ -204,11 +205,12 @@ class SimpleSignalFinder(BitSignalFinder):
     def checkGoldenXedInterval(self):
         # クロスした
         if(self._goldedXedTime > 0):
+            diff = self._timeMinDiff(self.crntTimeMin, self._goldedXedTime)
             # クロス期間内
-            if((self.crntTimeMin - self._goldedXedTime) <= GOLDENXED_INTERVAL):
+            if(diff <= GOLDENXED_INTERVAL):
                 return True
             else:
-                print("goldedXedTime OFF! {}".format(self.crntTimeSec))
+                print("goldedXedTime OFF! crntTimeMin:{}, _goldedXedTime:{}, diff:{}".format(self.crntTimeMin, self._goldedXedTime, diff))
                 self._goldedXedTime = 0
 
         return False
@@ -221,6 +223,7 @@ class SimpleSignalFinder(BitSignalFinder):
         ロウソクの下ヒゲが当たったら _hasLowerBollLb をON
     """
     def checkCrossingLowBollingInterval(self):
+
         if(
             # Lbの期間がすぎた
             self._lowerBollLbTime == 0 and
@@ -235,7 +238,7 @@ class SimpleSignalFinder(BitSignalFinder):
             #下抜け期間である
             (
                 self._lowerBollLbTime == 0 or
-                self.crntTimeMin - self._lowerBollLbTime <= LBED_INTERVAL
+                self._timeMinDiff(self.crntTimeMin, self._lowerBollLbTime) <= LBED_INTERVAL
             )
         ):
             print("Crossed LB!: time:{}, low:{}, boll_lb:{},".format(self.crntTimeSec, self.crntLow, self.crntBollLb))
@@ -243,7 +246,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
         if(self._lowerBollLbTime > 0):
-            if(self.crntTimeMin - self._lowerBollLbTime > LBED_INTERVAL):
+            if(self._timeMinDiff(self.crntTimeMin, self._lowerBollLbTime) > LBED_INTERVAL):
                 print("Crossed LB RESET!: time:{}, low:{}, boll_lb:{},".format(self.crntTimeSec, self.crntLow, self.crntBollLb))
                 self._lowerBollLbTime = 0
                 return False
@@ -345,6 +348,23 @@ class SimpleSignalFinder(BitSignalFinder):
         self._sellPrice = 0
 
         self._deleteStatus()
+
+
+    """
+        単純にself.crntTimeMinを使用するとcrntTimeMin < prevTimeMin
+        の場合100の位の計算になってしまう。上記の場合分のところだけ抜き出して計算する。
+    """
+    def _timeMinDiff(self, crntTimeMin, prevTimeMin):
+        diff = (crntTimeMin - prevTimeMin)
+        # 100の位からの引き算となるので60を足す。
+        _crntTime = int(str(crntTimeMin)[10:12])
+        _gxTime = int(str(prevTimeMin)[10:12])
+        if (_crntTime < _gxTime):
+            _crntTime = _crntTime + 60
+            diff = _crntTime - _gxTime
+
+        return diff
+
 
 
 #TODO デッドクロス、ロスカット実装

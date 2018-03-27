@@ -18,7 +18,7 @@ if __name__ == '__main__':
     side = ""
     retryCount = 0
 
-    tickFilePath = "./csv/tick_quoinex_201803161336_BTC_JPY.csv"
+    tickFilePath = "./csv/tick_quoinex_201803271624_BTC_JPY.csv"
     df = pd.read_csv(tickFilePath)
     tmpList = df.values.tolist()
     for tick in tmpList:

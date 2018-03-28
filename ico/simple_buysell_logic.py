@@ -6,6 +6,7 @@ import math
 import stockstats
 import json
 import os
+import datetime
 
 from ico.bit_buysell_logic import BitSignalFinder
 
@@ -30,6 +31,8 @@ LBED_INTERVAL = 5
 # GXしたかどうか
 GOLDENXED_INTERVAL = 4
 
+# ロスカチェックの入るタイミング（購入してからの時間（分））
+LOSSCUT_STARTTIMING_INERVAL = 50
 
 
 class SimpleSignalFinder(BitSignalFinder):
@@ -55,6 +58,9 @@ class SimpleSignalFinder(BitSignalFinder):
 
         # 売買フラグ。これがONの場合売買する。
         self._buySellSignalFlag = False
+
+        # 理想の売り値（既に定義済み）
+        # self._possibleSellPrice = 0
 
 
 
@@ -114,7 +120,7 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buySellSignalFlag and
 
             # rsiが下記以下で連続買いが走る。
-            self.crntRsi <= 75.0 and
+            self.crntRsi <= 60.0 and
             self.crntRsi > 0.0
         ):
 
@@ -122,6 +128,9 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buyNum += 1
             self._buyPrice = self.crntPrice
             self._buyDateTime = self.crntTimeSec
+
+            # ロスカ、売りで使用
+            self._possibleSellPrice = self.getMinSellPrice(self._buyPrice, coinAmount=self._coinAmount, minEarn=self._minEarn)
 
             return self._buyPrice
         return 0
@@ -267,7 +276,7 @@ class SimpleSignalFinder(BitSignalFinder):
             # 売買フラグがON
             # self._buySellSignalFlag and
             self._buyPrice > 0 and
-            self.crntPrice > self._buyPrice + 1000.0
+            self.crntPrice > self._possibleSellPrice
         ):
             self._buyNum -= 1
             self._sellPrice = self.crntPrice
@@ -340,32 +349,67 @@ class SimpleSignalFinder(BitSignalFinder):
         return False
 
 
+
+    """
+        一定時間たっても売れない場合はロスカ
+    """
+    def lossCutSell(self):
+        if(
+            # 買ったことがある
+            self._buyPrice > 0 and
+            self._possibleSellPrice > 0 and
+            #まだ売りが走ってない
+            self._sellPrice == 0 and
+            # 一定時間経過した
+            self._timeMinDiff(self.crntTimeMin, self._buyDateTime) >= LOSSCUT_STARTTIMING_INERVAL and
+            # 買いよりは高いが理想値段になっていない
+            (self.crntPrice > self._buyPrice and self._possibleSellPrice > self.crntPrice)
+        ):
+            self._buyNum -= 1
+            self._sellPrice = self.crntPrice
+            #利益算出
+            earnedVal = self._sellPrice - self._buyPrice
+            self._totalEarned += earnedVal
+            print("***lossCutSell! {} price:{}, macd:{}, rsi:{}, totalEarned:{}".format(self.crntTimeSec, self._sellPrice, self.crntMacd, self.crntRsi, self._totalEarned))
+
+            return self._sellPrice
+
+        return 0
+
+
     """
         再びBuyを行う為のリセット
     """
     def resetParamsForBuy(self):
         self._buyPrice = 0
         self._sellPrice = 0
+        self._possibleSellPrice = 0
 
         self._deleteStatus()
 
 
     """
-        単純にself.crntTimeMinを使用するとcrntTimeMin < prevTimeMin
-        の場合100の位の計算になってしまう。上記の場合分のところだけ抜き出して計算する。
+        時間（日時分）の時間差を分で返す。
+        
+        :return float 差分(分）
     """
     def _timeMinDiff(self, crntTimeMin, prevTimeMin):
-        diff = (crntTimeMin - prevTimeMin)
-        # 100の位からの引き算となるので60を足す。
-        _crntTime = int(str(crntTimeMin)[10:12])
-        _gxTime = int(str(prevTimeMin)[10:12])
-        if (_crntTime < _gxTime):
-            _crntTime = _crntTime + 60
-            diff = _crntTime - _gxTime
+        _crntTime = self._intToDateTimeMin(crntTimeMin)
+        _prevTime = self._intToDateTimeMin(prevTimeMin)
 
-        return diff
+        delta = _crntTime - _prevTime
+        return float(delta.total_seconds()/60.0)
 
 
+    def _intToDateTimeMin(self, crntTimeMin):
+        yr = int(str(crntTimeMin)[0:4])
+        mt = int(str(crntTimeMin)[4:6])
+        dt = int(str(crntTimeMin)[6:8])
+        tm = int(str(crntTimeMin)[8:10])
+        mn = int(str(crntTimeMin)[10:12])
 
-#TODO デッドクロス、ロスカット実装
-#TODO Buyが約定しないときのキャンセル実装
+        return datetime.datetime(yr, mt, dt, tm, mn)
+
+
+
+#TODO ロスカット実装

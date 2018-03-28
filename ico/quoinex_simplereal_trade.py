@@ -37,6 +37,8 @@ if __name__ == '__main__':
         buyPrice = simplesingal.buySignal()
         sellPrice = simplesingal.sellSignal()
         simplesingal._checkDeadXed_MacdS()
+        if(sellPrice == 0):
+            sellPrice = simplesingal.lossCutSell()
 
         if(buyPrice > 0):
             side = "buy"

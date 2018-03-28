@@ -32,7 +32,7 @@ LBED_INTERVAL = 5
 GOLDENXED_INTERVAL = 4
 
 # ロスカチェックの入るタイミング（購入してからの時間（分））
-LOSSCUT_STARTTIMING_INERVAL = 50
+LOSSCUT_STARTTIMING_INERVAL = 10
 
 
 class SimpleSignalFinder(BitSignalFinder):
@@ -130,7 +130,7 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buyDateTime = self.crntTimeSec
 
             # ロスカ、売りで使用
-            self._possibleSellPrice = self.getMinSellPrice(self._buyPrice, coinAmount=self._coinAmount, minEarn=self._minEarn)
+            self._possibleSellPrice = self.getMinSellPrice(self._buyPrice, coinAmount=self._coinAmount, minEarn=self._minEarn)[0]
 
             return self._buyPrice
         return 0

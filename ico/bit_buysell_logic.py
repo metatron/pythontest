@@ -774,6 +774,7 @@ class BitSignalFinder():
             'isLossCut': self._isLossCut,
             'buyOrderId': str(self._buyOrderId),
             'sellOrderId': str(self._sellOrderId),
+            'possibleSellPrice': str(self._possibleSellPrice),
         }
 
         with open(STATUS_FILEPATH, 'w', encoding='utf-8') as outfile:
@@ -792,6 +793,7 @@ class BitSignalFinder():
             self._isLossCut = float(params['isLossCut'])
             self._buyOrderId = str(params['buyOrderId'])
             self._sellOrderId = str(params['sellOrderId'])
+            self._possibleSellPrice = str(params['possibleSellPrice'])
 
 
     def _deleteStatus(self):

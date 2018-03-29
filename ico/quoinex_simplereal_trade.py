@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 
-MAX_RETRY_COUNT = 20
+MAX_RETRY_COUNT = 100
 
 if __name__ == '__main__':
     quoinex = QuoinexController(key="", secret="")
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
             if(retryCount >= MAX_RETRY_COUNT):
                 # sellは絶対キャンセルしない。
-                if(side == "buy"):
+                if(side == "buy" and status != "filled"):
                     quoinex.cancelOrder(crntOrderId)
                     print("CANCELED BUY ORDER! {} orderId:{}".format(simplesingal.crntTimeSec, crntOrderId))
                     simplesingal.resetParamsForBuy()

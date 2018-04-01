@@ -33,12 +33,11 @@ if __name__ == '__main__':
         print(quoinex._tickList[-1])
 
         simplesingal.update(quoinex._tickList, stockstatsClass)
-        # simplesingal.decideLossCut()
         buyPrice = simplesingal.buySignal()
         sellPrice = simplesingal.sellSignal()
-        simplesingal._checkDeadXed_MacdS()
         if(sellPrice == 0):
             sellPrice = simplesingal.lossCutSell()
+        simplesingal._checkDeadXed_MacdS()
 
         if(buyPrice > 0):
             side = "buy"

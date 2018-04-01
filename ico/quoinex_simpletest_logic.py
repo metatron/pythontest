@@ -18,7 +18,7 @@ if __name__ == '__main__':
     side = ""
     retryCount = 0
 
-    tickFilePath = "./csv/tick_quoinex_201803281210_BTC_JPY.csv"
+    tickFilePath = "./csv/tick_quoinex_201803301719_BTC_JPY.csv"
     df = pd.read_csv(tickFilePath)
     tmpList = df.values.tolist()
     for tick in tmpList:
@@ -31,9 +31,9 @@ if __name__ == '__main__':
         simplesingal.update(quoinex._tickList, stockstatsClass)
         buyPrice = simplesingal.buySignal()
         sellPrice = simplesingal.sellSignal()
-        simplesingal._checkDeadXed_MacdS()
         if(sellPrice == 0):
             sellPrice = simplesingal.lossCutSell()
+        simplesingal._checkDeadXed_MacdS()
 
         if(buyPrice > 0):
             side = "buy"

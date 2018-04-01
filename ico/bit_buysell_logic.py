@@ -793,7 +793,7 @@ class BitSignalFinder():
             self._isLossCut = float(params['isLossCut'])
             self._buyOrderId = str(params['buyOrderId'])
             self._sellOrderId = str(params['sellOrderId'])
-            self._possibleSellPrice = str(params['possibleSellPrice'])
+            self._possibleSellPrice = float(params['possibleSellPrice'])
 
 
     def _deleteStatus(self):

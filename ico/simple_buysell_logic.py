@@ -34,6 +34,9 @@ GOLDENXED_INTERVAL = 4
 # ロスカチェックの入るタイミング（購入してからの時間（分））
 LOSSCUT_STARTTIMING_INERVAL = 10
 
+# ロウソク足の種類
+CANDLETYPE_POS = 0
+CANDLETYPE_NEG = 1
 
 class SimpleSignalFinder(BitSignalFinder):
 
@@ -71,6 +74,9 @@ class SimpleSignalFinder(BitSignalFinder):
 
         self.openAll = self._stockstatClass.get('open')
         self.crntOpen = float(self.openAll[TICK_NEWEST])
+
+        self.highAll = self._stockstatClass.get('high')
+        self.crntHigh = float(self.highAll[TICK_NEWEST])
 
         self.lowAll = self._stockstatClass.get('low')
         self.crntLow = float(self.lowAll[TICK_NEWEST])
@@ -113,7 +119,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     def buySignal(self, dryRun=True):
-        print("buySignal {} canTrade:{}, buyPrice:{}, sellbuyflg:{}, rsi:{}".format(self.crntTimeSec, self.canTrade, self._buyPrice, self._buySellSignalFlag, self.crntRsi))
+        print("buySignal {} canTrade:{}, crntPrice:{}, buyPrice:{}, sellbuyflg:{}, rsi:{}, candle:{}".format(self.crntTimeSec, self.canTrade, self.crntPrice, self._buyPrice, self._buySellSignalFlag, self.crntRsi, self.getCandleType()))
         if (
             self.canTrade and
             self._buyPrice == 0 and
@@ -121,7 +127,10 @@ class SimpleSignalFinder(BitSignalFinder):
 
             # rsiが下記以下で連続買いが走る。
             self.crntRsi <= 60.0 and
-            self.crntRsi > 0.0
+            self.crntRsi > 0.0 and
+
+            # 陽線の時に買う
+            self.getCandleType() == CANDLETYPE_POS
         ):
 
             print("***Buy! {} price:{}, macd:{}, rsi:{}, goldedXedTime:{}".format(self.crntTimeSec, self.crntPrice, self.crntMacd, self.crntRsi, self._goldedXedTime))
@@ -184,6 +193,7 @@ class SimpleSignalFinder(BitSignalFinder):
         ):
             print("goldedXedTime ON! {} macd1:{}, macd2:{}".format(self.crntTimeSec, (self.crntMacdH - self.crntMacdS), (self.macdHAll[-2] - self.macdSAll[-2])))
             self._goldedXedTime = self.crntTimeMin
+
 
     """
         ゴールデンクロスチェック（macd(orange)とMacdS(yellow)使用）
@@ -321,30 +331,36 @@ class SimpleSignalFinder(BitSignalFinder):
                 # 3回連続macdH下落
                 self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3]
             )
-            # or
-            # (
-            #     #ガラの際は買わない
-            #     len(self.macdHAll) > 3 and
-            #     self.checkSupriseDrop()
-            # )
+            or
+            (
+                #ガラの際は買わない
+                len(self.macdHAll) > 3 and
+                self.checkSupriseDrop()
+            )
             ):
+            print("_checkDeadXed_MacdS!! {} buyPrice:{}, macdDiff:{}".format(
+                self.crntTimeSec, self._buyPrice,
+                (self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3])))
+
             self._goldedXedTime = 0
             self._buySellSignalFlag = False
             self._lowerBollLbTime = 0
+            #理想売値を修正（1円でもたかかったら即売り）
+            self._possibleSellPrice = self._buyPrice + 1.0
             #Sellする特に規制しない
             # self._buyPrice = 0
             # self._sellPrice = 0
 
 
     """
-        1000円以上ドロップしたらやばげ
+        大量ガラした
     """
     def checkSupriseDrop(self):
         if(
             (self.crntPrice > 0 and self.crntOpen > 0) and
-            self.crntPrice - self.crntOpen < -2000.0
+            self.crntPrice - self.crntOpen < -2100.0
         ):
-            print("**********suddenDrop!! {} self.crntPrice: {}, self.crntOpen:{}".format(self.crntTimeSec, self.crntPrice, self.crntOpen))
+            print("checkSupriseDrop!! {} self.crntPrice:{}, self.crntOpen:{}, diff:{}".format(self.crntTimeSec, self.crntPrice, self.crntOpen, (self.crntPrice - self.crntOpen)))
             return True
         return False
 
@@ -375,6 +391,24 @@ class SimpleSignalFinder(BitSignalFinder):
             return self._sellPrice
 
         return 0
+
+
+
+    def getCandleType(self, timePrev=TICK_NEWEST):
+        if(len(self.highAll) < 3):
+            return CANDLETYPE_NEG
+
+        # 現在のロウソクはまだできてないのでTickデータを使用
+        if(timePrev == TICK_NEWEST):
+            if(self.crntPrice - self.crntLow > 0):
+                return CANDLETYPE_POS
+            return CANDLETYPE_NEG
+
+        # ロウソクができていればそれを使用
+        if(self.highAll[timePrev] > self.lowAll[timePrev]):
+            return CANDLETYPE_POS
+        return CANDLETYPE_NEG
+
 
 
     """
@@ -413,3 +447,6 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
 #TODO ロスカット実装
+#TODO 負けない実装
+    # 30秒以降で陰線になっていない
+    # 傾向として、上がり調子の時はほぼ陰線がない

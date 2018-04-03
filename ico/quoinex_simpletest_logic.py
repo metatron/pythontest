@@ -39,14 +39,17 @@ if __name__ == '__main__':
             side = "buy"
             crntOrderId = "buyXXXX" # quoinex.orderCoinRequest(side, buyPrice, simplesingal._coinAmount)
             simplesingal.updateStatus(side, crntOrderId)
+            simplesingal.waitingForRequestON()
 
         if(sellPrice > 0):
             side = "sell"
             crntOrderId = "sellXXXX" # quoinex.orderCoinRequest(side, sellPrice, simplesingal._coinAmount)
             simplesingal.updateStatus(side, crntOrderId)
+            simplesingal.waitingForRequestON()
 
         if(crntOrderId != ""):
             status = "filled"
+            simplesingal.waitingForRequestOFF()
             if(status == "filled"):
                 if(side == "sell"):
                     simplesingal.resetParamsForBuy()
@@ -56,8 +59,8 @@ if __name__ == '__main__':
             elif(status == "live"):
                 retryCount += 1
 
-            if(retryCount >= MAX_RETRY_COUNT):
-                quoinex.cancelOrder(crntOrderId)
+            # if(retryCount >= MAX_RETRY_COUNT):
+                # quoinex.cancelOrder(crntOrderId)
 
         # print(quoinex._tickList[-1])
         # quoinex.makeGraph(quoinex.convertToStockStats())

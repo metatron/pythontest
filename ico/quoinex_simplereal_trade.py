@@ -30,7 +30,7 @@ if __name__ == '__main__':
             continue
 
         stockstatsClass = quoinex.convertToStockStats()
-        print(quoinex._tickList[-1])
+        # print(quoinex._tickList[-1])
 
         simplesingal.update(quoinex._tickList, stockstatsClass)
         buyPrice = simplesingal.buySignal()
@@ -43,15 +43,18 @@ if __name__ == '__main__':
             side = "buy"
             crntOrderId = quoinex.orderCoinRequest(side, buyPrice, simplesingal._coinAmount)
             simplesingal.updateStatus(side, crntOrderId)
+            simplesingal.setWaitingForRequest(True)
 
         if(sellPrice > 0):
             side = "sell"
             crntOrderId = quoinex.orderCoinRequest(side, sellPrice, simplesingal._coinAmount)
             simplesingal.updateStatus(side, crntOrderId)
+            simplesingal.setWaitingForRequest(True)
 
         if(crntOrderId != ""):
             status = quoinex.checkOrder(crntOrderId)
             if(status == "filled"):
+                simplesingal.setWaitingForRequest(False)
                 if(side == "sell"):
                     simplesingal.resetParamsForBuy()
                 crntOrderId = ""
@@ -66,6 +69,7 @@ if __name__ == '__main__':
                     quoinex.cancelOrder(crntOrderId)
                     print("CANCELED BUY ORDER! {} orderId:{}".format(simplesingal.crntTimeSec, crntOrderId))
                     simplesingal.resetParamsForBuy()
+                    simplesingal.setWaitingForRequest(False)
                     crntOrderId = ""
                     side = ""
                     retryCount = 0

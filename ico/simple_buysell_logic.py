@@ -65,6 +65,9 @@ class SimpleSignalFinder(BitSignalFinder):
         # 理想の売り値（既に定義済み）
         # self._possibleSellPrice = 0
 
+        # 通知中かどうか
+        self._waitingForRequest = False
+
 
 
 
@@ -119,6 +122,9 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     def buySignal(self, dryRun=True):
+        if(self.getWaitingForRequest()):
+            return 0
+
         print("buySignal {} canTrade:{}, crntPrice:{}, buyPrice:{}, sellbuyflg:{}, rsi:{}, candle:{}".format(self.crntTimeSec, self.canTrade, self.crntPrice, self._buyPrice, self._buySellSignalFlag, self.crntRsi, self.getCandleType()))
         if (
             self.canTrade and
@@ -279,6 +285,9 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
     def sellSignal(self, dryRun=True):
+        if(self.getWaitingForRequest()):
+            return 0
+
         if(
             self.canTrade and
             self._buyNum > 0.0 and
@@ -370,6 +379,9 @@ class SimpleSignalFinder(BitSignalFinder):
         一定時間たっても売れない場合はロスカ
     """
     def lossCutSell(self):
+        if(self.getWaitingForRequest()):
+            return 0
+
         if(
             # 買ったことがある
             self._buyPrice > 0 and
@@ -445,8 +457,19 @@ class SimpleSignalFinder(BitSignalFinder):
         return datetime.datetime(yr, mt, dt, tm, mn)
 
 
+    """
+        通信中フラグON
+    """
+    def getWaitingForRequest(self):
+        return self._waitingForRequest
 
-#TODO ロスカット実装
+    """
+        通信中フラグOFF
+    """
+    def setWaitingForRequest(self, status):
+        self._waitingForRequest = status
+
+
 #TODO 負けない実装
     # 30秒以降で陰線になっていない
     # 傾向として、上がり調子の時はほぼ陰線がない

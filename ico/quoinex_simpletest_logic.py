@@ -39,17 +39,17 @@ if __name__ == '__main__':
             side = "buy"
             crntOrderId = "buyXXXX" # quoinex.orderCoinRequest(side, buyPrice, simplesingal._coinAmount)
             simplesingal.updateStatus(side, crntOrderId)
-            simplesingal.waitingForRequestON()
+            simplesingal.setWaitingForRequest(True)
 
         if(sellPrice > 0):
             side = "sell"
             crntOrderId = "sellXXXX" # quoinex.orderCoinRequest(side, sellPrice, simplesingal._coinAmount)
             simplesingal.updateStatus(side, crntOrderId)
-            simplesingal.waitingForRequestON()
+            simplesingal.setWaitingForRequest(True)
 
         if(crntOrderId != ""):
             status = "filled"
-            simplesingal.waitingForRequestOFF()
+            simplesingal.setWaitingForRequest(False)
             if(status == "filled"):
                 if(side == "sell"):
                     simplesingal.resetParamsForBuy()

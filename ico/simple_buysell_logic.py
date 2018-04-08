@@ -38,6 +38,10 @@ LOSSCUT_STARTTIMING_INERVAL = 10
 CANDLETYPE_POS = 0
 CANDLETYPE_NEG = 1
 
+# ガラッたタイムのリセットタイミング
+SUDDENDROP_RESET_INERVAL = 4
+
+
 class SimpleSignalFinder(BitSignalFinder):
 
 
@@ -67,6 +71,13 @@ class SimpleSignalFinder(BitSignalFinder):
 
         # 通知中かどうか
         self._waitingForRequest = False
+
+        # 急激な寝落ちが起きた時間
+        self.suddenDropTimeMin = 0
+
+        # 最後に買った時のRsi保持。これ以上高くないと買わない。sellでリセット。
+        self.prevBoughtRsi = 0
+
 
 
 
@@ -131,6 +142,9 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buyPrice == 0 and
             self._buySellSignalFlag and
 
+            #連続買いする時はRsiが前回よりも高くないとダメ
+            self.crntRsi > self.prevBoughtRsi and
+
             # rsiが下記以下で連続買いが走る。
             self.crntRsi <= 60.0 and
             self.crntRsi > 0.0 and
@@ -143,6 +157,7 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buyNum += 1
             self._buyPrice = self.crntPrice
             self._buyDateTime = self.crntTimeSec
+            self.prevBoughtRsi = self.crntRsi
 
             # ロスカ、売りで使用
             self._possibleSellPrice = self.getMinSellPrice(self._buyPrice, coinAmount=self._coinAmount, minEarn=self._minEarn)[0]
@@ -159,6 +174,7 @@ class SimpleSignalFinder(BitSignalFinder):
         # パラメータ更新があるのでとりあえず実行。結果を取得
         xedLB = self.checkCrossingLowBollingInterval()
         gXed = self.checkGoldenXedInterval()
+        dropped = self.checkSupriseDrop()
 
         # print("_buyLogic_Boll_GX {}: xedLB:{}, gXed:{}, isAbove:{}, rsi:{}".format(self.crntTimeSec, xedLB, gXed, self.isAboveLowBoll(), self.crntRsi))
 
@@ -170,6 +186,9 @@ class SimpleSignalFinder(BitSignalFinder):
 
             #ゴールデンクロス発生中
             gXed and
+
+            # ガラがない
+            dropped == False and
 
             # rsiに値が入っていること
             self.crntRsi <= 40.0 and
@@ -315,7 +334,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
     """
         デッドクロスチェック（MacdH(grey)とMacdS(yellow)使用）
-        時間更新
+        ここでフラグを操作するとGXが起こるまでしばらく買えないので注意。
 
         updateで使用
     """
@@ -326,6 +345,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
         if (
             self.canTrade and
+            len(self.macdHAll) > 3 and
             self._buySellSignalFlag and
             # (
             #     len(self.macdHAll) > 3 and
@@ -336,15 +356,13 @@ class SimpleSignalFinder(BitSignalFinder):
             #     self.macdHAll[-2] - self.macdSAll[-2] > 0
             # ) or
             (
-                len(self.macdHAll) > 3 and
                 # 3回連続macdH下落
                 self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3]
             )
             or
             (
                 #ガラの際は買わない
-                len(self.macdHAll) > 3 and
-                self.checkSupriseDrop()
+                # self.suddenDropTimeMin > 0
             )
             ):
             print("_checkDeadXed_MacdS!! {} buyPrice:{}, macdDiff:{}".format(
@@ -363,6 +381,8 @@ class SimpleSignalFinder(BitSignalFinder):
 
     """
         大量ガラした
+        一定時間たったら即復帰させたいので
+        _checkDeadXed_MacdSには追加しない。
     """
     def checkSupriseDrop(self):
         if(
@@ -370,8 +390,21 @@ class SimpleSignalFinder(BitSignalFinder):
             self.crntPrice - self.crntOpen < -2100.0
         ):
             print("checkSupriseDrop!! {} self.crntPrice:{}, self.crntOpen:{}, diff:{}".format(self.crntTimeSec, self.crntPrice, self.crntOpen, (self.crntPrice - self.crntOpen)))
+            self.suddenDropTimeMin = self.crntTimeMin
             return True
-        return False
+
+        #タイムがセットされている場合は時間をみてリセットする
+        if(self.suddenDropTimeMin > 0):
+            # 一定時間たったらリセット
+            if(self._timeMinDiff(self.crntTimeMin, self.suddenDropTimeMin) > SUDDENDROP_RESET_INERVAL):
+                print("checkSupriseDrop RESET!! {} self.crntPrice:{}, interval:{}".format(self.crntTimeSec, self.crntPrice,self._timeMinDiff(self.crntTimeMin, self.suddenDropTimeMin)))
+                self.suddenDropTimeMin = 0
+                return False
+        # タイムがセットされていない
+        else:
+            return False
+
+        return True
 
 
 
@@ -430,6 +463,7 @@ class SimpleSignalFinder(BitSignalFinder):
         self._buyPrice = 0
         self._sellPrice = 0
         self._possibleSellPrice = 0
+        self.prevBoughtRsi = 0
 
         self._deleteStatus()
 

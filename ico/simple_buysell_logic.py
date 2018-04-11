@@ -78,6 +78,9 @@ class SimpleSignalFinder(BitSignalFinder):
         # 最後に買った時のRsi保持。これ以上高くないと買わない。sellでリセット。
         self.prevBoughtRsi = 0
 
+        # これ以上高くは買わない
+        self.maxBuyPrice = 0
+
 
 
 
@@ -94,6 +97,9 @@ class SimpleSignalFinder(BitSignalFinder):
 
         self.lowAll = self._stockstatClass.get('low')
         self.crntLow = float(self.lowAll[TICK_NEWEST])
+
+        self.closeAll = self._stockstatClass.get('close')
+        self.crntClose = float(self.closeAll[TICK_NEWEST])
 
         self.macdAll = self._stockstatClass.get('macd')   # orange
         self.crntMacd = float(self.macdAll[TICK_NEWEST])
@@ -505,5 +511,6 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
 #TODO 負けない実装
-    # 30秒以降で陰線になっていない
-    # 傾向として、上がり調子の時はほぼ陰線がない
+    #売値の選定
+    #過去の最高値よりも高くは設定しない。
+    #陽線のcloseを設定

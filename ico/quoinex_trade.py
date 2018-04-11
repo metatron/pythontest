@@ -89,7 +89,7 @@ class QuoinexController(BitFlyerController):
 
     def cancelOrder(self, orderId):
         path = "/orders/{}/cancel".format(orderId)
-        resultJson = self._getRequestData(path)
+        resultJson = self._getRequestData(path, getOrPost='put')
         print(json.dumps(resultJson))
 
 
@@ -172,8 +172,10 @@ class QuoinexController(BitFlyerController):
 
         if(getOrPost == 'get'):
             res = requests.get(self._url+path, headers=self._headers, params=params)
+        elif(getOrPost == 'post'):
+            res = requests.post(self._url + path, data=params, headers=self._headers)
         else:
-            res = requests.post(self._url+path, data=params, headers=self._headers)
+            res = requests.put(self._url + path, data=params, headers=self._headers)
 
         if res.status_code == 200:
             resultJson = json.loads(res.text)
@@ -198,6 +200,6 @@ if __name__ == '__main__':
 
     # quoinex.autoBuy()
     # quoinex.autoSell()
-    quoinex.cancelOrder(237219269);
+    quoinex.cancelOrder(252567494)
 
 

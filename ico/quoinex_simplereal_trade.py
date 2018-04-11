@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 
-MAX_RETRY_COUNT = 100
+MAX_RETRY_COUNT = 30
 
 if __name__ == '__main__':
     quoinex = QuoinexController(key="", secret="")

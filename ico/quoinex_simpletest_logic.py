@@ -12,13 +12,15 @@ if __name__ == '__main__':
     # quoinex.initGraph()
 
     simplesingal = SimpleSignalFinder(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
+    simplesingal._minEarn = 1.0
+    simplesingal._coinAmount = 0.002
 
     index=0
     crntOrderId = ""
     side = ""
     retryCount = 0
 
-    tickFilePath = "./csv/tick_quoinex_201803301719_BTC_JPY.csv"
+    tickFilePath = "./csv/tick_quoinex_201804111044_BTC_JPY.csv"
     df = pd.read_csv(tickFilePath)
     tmpList = df.values.tolist()
     for tick in tmpList:

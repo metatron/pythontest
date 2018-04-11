@@ -9,39 +9,16 @@ return: [1コイン辺りの最低売り金額, 買いの時との差, 売らな
 
 
 def getMinSellPrice(buyPrice, coinAmount=0.001, minEarn=1.0, extraFreeList=[0.0, 0.0]):
-    minAmount = 0.001
-    buyPrice = float(buyPrice)
-    coinAmount = float(coinAmount)
-    minEarn = float(minEarn)
+    #買ったコインを円に変換
+    actualBuyYenPrice = buyPrice * coinAmount
+    #売り（円）を設定
+    idealSellYenPrice = actualBuyYenPrice + minEarn
+    #売りのコイン値に変換
+    idealSellPrice = idealSellYenPrice /coinAmount
 
-    # 10万円以下手数料
-    extraFee = extraFreeList[0]
-    # 実際に払った金額
-    actualBuyPrice = buyPrice * coinAmount
+    diffPrice = idealSellPrice - buyPrice
 
-    # 50万以下だったら0.14%
-    if (actualBuyPrice > 100000.0 and actualBuyPrice <= 500000.0):
-        extraFee = extraFreeList[1]
-
-    # 0.01あたりに直す
-    ratio = minAmount / coinAmount
-
-    # 0.001あたりの手数料（x2。買い＆売り）
-    minExtraFee = actualBuyPrice * extraFee * ratio * 2
-
-    # 0.001あたりの金額
-    minActualBuyPrice = buyPrice * minAmount
-
-    # 0.001あたりの最低売り価格 (minEarn*ratioをする事で「全部売ればminEarnになる」)
-    possibleSellPrice = minActualBuyPrice + minExtraFee + (minEarn * ratio)
-
-    # 1コインに置き換える
-    coinSellPrice = possibleSellPrice / minAmount
-
-    # 1コインあたりのdiff
-    diffPrice = coinSellPrice - buyPrice
-
-    return [coinSellPrice, diffPrice, coinAmount]
+    return [idealSellPrice, diffPrice, coinAmount]
 
 
 

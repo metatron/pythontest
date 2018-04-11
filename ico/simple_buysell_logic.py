@@ -327,7 +327,7 @@ class SimpleSignalFinder(BitSignalFinder):
             #利益算出
             earnedVal = self._sellPrice - self._buyPrice
             self._totalEarned += earnedVal
-            print("***Sell! {} price:{}, macd:{}, rsi:{}, totalEarned:{}".format(self.crntTimeSec, self._sellPrice, self.crntMacd, self.crntRsi, self._totalEarned))
+            print("***Sell! {} sell:{}, bought:{}, macd:{}, rsi:{}, totalEarned:{}".format(self.crntTimeSec, self._sellPrice, self._buyPrice, self.crntMacd, self.crntRsi, self._totalEarned))
 
             # Buyを行う為のリセット
             # self.resetParamsForBuy()
@@ -510,7 +510,30 @@ class SimpleSignalFinder(BitSignalFinder):
         self._waitingForRequest = status
 
 
+
+    """
+    買った金額、個数から「利益額」を出す為に0.001コインあたりいくらでうればいいかを算出
+    :param minEarn 売らなければならないコインを全て売った時の利益額
+
+    return: [1コイン辺りの最低売り金額, 買いの時との差, 売らなければいけないコイン個数] 
+    """
+    def getMinSellPrice(self, buyPrice, coinAmount=0.001, minEarn=1.0):
+        # 買ったコインを円に変換
+        actualBuyYenPrice = buyPrice * coinAmount
+        # 売り（円）を設定
+        idealSellYenPrice = actualBuyYenPrice + minEarn
+        # 売りのコイン値に変換
+        idealSellPrice = idealSellYenPrice / coinAmount
+
+        diffPrice = idealSellPrice - buyPrice
+
+        return [idealSellPrice, diffPrice, coinAmount]
+
+
+
 #TODO 負けない実装
-    #売値の選定
-    #過去の最高値よりも高くは設定しない。
-    #陽線のcloseを設定
+#売値の選定
+#過去の最高値よりも高くは設定しない。
+#陽線のcloseを設定
+
+#self.prevBoughtRsiが効いてない

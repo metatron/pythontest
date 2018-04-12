@@ -40,7 +40,11 @@ CANDLETYPE_NEG = 1
 
 # ガラッたタイムのリセットタイミング
 SUDDENDROP_RESET_INERVAL = 4
+#10上記期間のうち10回も怒ったら即売り
+SUDDENDROP_LOSSCUT_NUM = 10
 
+#売った直後は買わない。これ分だけ待つ
+NEXT_BUY_WAIT_TIME = 1
 
 class SimpleSignalFinder(BitSignalFinder):
 
@@ -74,12 +78,18 @@ class SimpleSignalFinder(BitSignalFinder):
 
         # 急激な寝落ちが起きた時間
         self.suddenDropTimeMin = 0
+        self.suddenDropNum = 0
 
         # 最後に買った時のRsi保持。これ以上高くないと買わない。sellでリセット。
         self.prevBoughtRsi = 0
 
         # これ以上高くは買わない
         self.maxBuyPrice = 0
+
+        #売った時間
+        #この時に買いは走らないようにする。売ったということは下がる確率が高い。
+        self.soldTimeMin = 0
+
 
 
 
@@ -156,7 +166,10 @@ class SimpleSignalFinder(BitSignalFinder):
             self.crntRsi > 0.0 and
 
             # 陽線の時に買う
-            self.getCandleType() == CANDLETYPE_POS
+            self.getCandleType() == CANDLETYPE_POS and
+
+            # 売った時は買わない。既に高値の可能性が高い
+            self.crntTimeMin - self.soldTimeMin >= NEXT_BUY_WAIT_TIME
         ):
 
             print("***Buy! {} price:{}, macd:{}, rsi:{}, goldedXedTime:{}".format(self.crntTimeSec, self.crntPrice, self.crntMacd, self.crntRsi, self._goldedXedTime))
@@ -164,6 +177,7 @@ class SimpleSignalFinder(BitSignalFinder):
             self._buyPrice = self.crntPrice
             self._buyDateTime = self.crntTimeSec
             self.prevBoughtRsi = self.crntRsi
+            self.soldTimeMin = 0
 
             # ロスカ、売りで使用
             self._possibleSellPrice = self.getMinSellPrice(self._buyPrice, coinAmount=self._coinAmount, minEarn=self._minEarn)[0]
@@ -329,6 +343,8 @@ class SimpleSignalFinder(BitSignalFinder):
             self._totalEarned += earnedVal
             print("***Sell! {} sell:{}, bought:{}, macd:{}, rsi:{}, totalEarned:{}".format(self.crntTimeSec, self._sellPrice, self._buyPrice, self.crntMacd, self.crntRsi, self._totalEarned))
 
+            self.soldTimeMin = self.crntTimeMin
+
             # Buyを行う為のリセット
             # self.resetParamsForBuy()
 
@@ -397,6 +413,7 @@ class SimpleSignalFinder(BitSignalFinder):
         ):
             print("checkSupriseDrop!! {} self.crntPrice:{}, self.crntOpen:{}, diff:{}".format(self.crntTimeSec, self.crntPrice, self.crntOpen, (self.crntPrice - self.crntOpen)))
             self.suddenDropTimeMin = self.crntTimeMin
+            self.suddenDropNum += 1
             return True
 
         #タイムがセットされている場合は時間をみてリセットする
@@ -405,6 +422,7 @@ class SimpleSignalFinder(BitSignalFinder):
             if(self._timeMinDiff(self.crntTimeMin, self.suddenDropTimeMin) > SUDDENDROP_RESET_INERVAL):
                 print("checkSupriseDrop RESET!! {} self.crntPrice:{}, interval:{}".format(self.crntTimeSec, self.crntPrice,self._timeMinDiff(self.crntTimeMin, self.suddenDropTimeMin)))
                 self.suddenDropTimeMin = 0
+                self.suddenDropNum = 0
                 return False
         # タイムがセットされていない
         else:
@@ -429,8 +447,16 @@ class SimpleSignalFinder(BitSignalFinder):
             self._sellPrice == 0 and
             # 一定時間経過した
             self._timeMinDiff(self.crntTimeMin, self._buyDateTime) >= LOSSCUT_STARTTIMING_INERVAL and
-            # 買いよりは高いが理想値段になっていない
-            (self.crntPrice > self._buyPrice and self._possibleSellPrice > self.crntPrice)
+            (
+                # 買いよりは高いが理想値段になっていない
+                (self.crntPrice > self._buyPrice and self._possibleSellPrice > self.crntPrice)
+                or
+                #ガラがきた
+                (
+                    self.suddenDropTimeMin > 0 and
+                    self.suddenDropNum >= SUDDENDROP_LOSSCUT_NUM
+                )
+            )
         ):
             self._buyNum -= 1
             self._sellPrice = self.crntPrice

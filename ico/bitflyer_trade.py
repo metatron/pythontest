@@ -15,6 +15,7 @@ from matplotlib.finance import candlestick2_ohlc
 import stockstats as stss
 import os
 import datetime
+import copy
 
 from utils.stop_watch import stop_watch
 
@@ -27,13 +28,16 @@ TICK_POS_VOLUME = 2
 NEWEST_TICK_POS = -1
 
 # メモリー制限の為保持できるtickのサイズを決める
-MAX_TICKLIST_SIZE = 20000
+MAX_TICKLIST_SIZE = 10000
 
 CANDLE_POS_OPEN = 0
 CANDLE_POS_HIGH = 1
 CANDLE_POS_LOW = 2
 CANDLE_POS_CLOSE = 3
 CANDLE_POS_VOLUME = 4
+
+# これ以上の行をセーブしようとすると別ファイルになる
+TICKDATA_FILE_MAXLINESIZE = 2500
 
 
 class BitFlyerController():
@@ -59,16 +63,23 @@ class BitFlyerController():
         self._code = code
         self._secret = secret
 
+        #tickデータの保存名
+        self._tickFileName = "tick_bitflyer"
+
         self._initParams()
 
 
     def _initParams(self):
         crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
-        self._tickFilePath = "./csv/tick_bitflyer" + str(crntDateTime) + "_" + self._coin + ".csv"
+        self._tickFilePath = "./csv/" + self._tickFileName + "_" + str(crntDateTime) + "_" + self._coin + ".csv"
 
         # ティックリスト
         # [時分秒,値段],...
         self._tickList = []
+
+        # tickデータ。セーブ用に2500行しか持たない。
+        # 実際の取引のは使わず、2500行に達したら別ファイルで保存を開始する。
+        self._tickListForSave = []
 
         # ロウソク
         # [時分][open, high, low, close],...
@@ -183,6 +194,8 @@ class BitFlyerController():
         # tickリストに追加
         nowDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self._tickList.append([str(nowDateTime), price, volume])
+        #セーブ用の配列にコピー
+        self._tickListForSave.append([str(nowDateTime), price, volume])
 
         # メモリに乗り切らない可能性があるのでリサイズ
         startPos = max(0, len(self._tickList)-MAX_TICKLIST_SIZE)
@@ -385,8 +398,19 @@ class BitFlyerController():
         ティックデータの保存
     """
     def writeTickList(self):
-        df = pd.DataFrame(self._tickList)
+        # df = pd.DataFrame(self._tickList)
+        df = pd.DataFrame(self._tickListForSave)
         df.to_csv(self._tickFilePath)
+
+        # セーブファイル更新
+        self.saveToNewFile()
+
+
+    def saveToNewFile(self):
+        if (len(self._tickListForSave) > TICKDATA_FILE_MAXLINESIZE):
+            self._tickListForSave.clear()
+            crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
+            self._tickFilePath = "./csv/" + self._tickFileName + "_" + str(crntDateTime) + "_" + self._coin + ".csv"
 
 
     def readTickList(self):

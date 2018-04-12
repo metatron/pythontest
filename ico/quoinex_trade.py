@@ -44,10 +44,8 @@ class QuoinexController(BitFlyerController):
         self._url = "https://api.quoine.com"
         self.token_id = key
 
+        self._tickFileName = "tick_quoinex"
         self._initParams()
-
-        crntDateTime = datetime.datetime.now().strftime("%Y%m%d%H%M")
-        self._tickFilePath = "./csv/tick_quoinex_" + str(crntDateTime) + "_" + self._coin + ".csv"
 
 
 

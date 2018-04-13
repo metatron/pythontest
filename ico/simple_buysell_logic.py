@@ -450,12 +450,12 @@ class SimpleSignalFinder(BitSignalFinder):
             (
                 # 買いよりは高いが理想値段になっていない
                 (self.crntPrice > self._buyPrice and self._possibleSellPrice > self.crntPrice)
-                or
-                #ガラがきた
-                (
-                    self.suddenDropTimeMin > 0 and
-                    self.suddenDropNum >= SUDDENDROP_LOSSCUT_NUM
-                )
+                # or
+                # #ガラがきた
+                # (
+                #     self.suddenDropTimeMin > 0 and
+                #     self.suddenDropNum >= SUDDENDROP_LOSSCUT_NUM
+                # )
             )
         ):
             self._buyNum -= 1

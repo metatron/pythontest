@@ -168,13 +168,13 @@ class SimpleSignalFinder(BitSignalFinder):
             # 陽線の時に買う
             self.getCandleType() == CANDLETYPE_POS and
 
-            # 売った時は買わない。既に高値の可能性が高い
+            # 売った時の分足では買わない。既に高値の可能性が高い
             self.crntTimeMin - self.soldTimeMin >= NEXT_BUY_WAIT_TIME
         ):
 
             print("***Buy! {} price:{}, macd:{}, rsi:{}, goldedXedTime:{}".format(self.crntTimeSec, self.crntPrice, self.crntMacd, self.crntRsi, self._goldedXedTime))
             self._buyNum += 1
-            self._buyPrice = self.crntPrice
+            self._buyPrice = self.crntPrice + 0.5 #0.5円高く買うことで買いやすくする。
             self._buyDateTime = self.crntTimeSec
             self.prevBoughtRsi = self.crntRsi
             self.soldTimeMin = 0
@@ -202,17 +202,17 @@ class SimpleSignalFinder(BitSignalFinder):
             # #ボリンジャーLBを下回った事がある。
             # xedLB and
             #今は上回っている
-            self.isAboveLowBoll() and
+            # self.isAboveLowBoll() and
 
             #ゴールデンクロス発生中
             gXed and
 
             # ガラがない
-            dropped == False and
+            dropped == False
 
             # rsiに値が入っていること
-            self.crntRsi <= 40.0 and
-            self.crntRsi > 0.0
+            # self.crntRsi <= 40.0 and
+            # self.crntRsi > 0.0
         ):
             self._buySellSignalFlag = True
             return True
@@ -558,8 +558,7 @@ class SimpleSignalFinder(BitSignalFinder):
 
 
 #TODO 負けない実装
-#売値の選定
-#過去の最高値よりも高くは設定しない。
-#陽線のcloseを設定
+#self.prevBoughtRsi が効いてない
 
-#self.prevBoughtRsiが効いてない
+# 買った後 prevBoughtRsi と crntRsi を比較。
+# 下向いた&&値段が上なら即売り losscutに組み込む

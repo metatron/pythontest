@@ -32,7 +32,7 @@ LBED_INTERVAL = 5
 GOLDENXED_INTERVAL = 4
 
 # ロスカチェックの入るタイミング（購入してからの時間（分））
-LOSSCUT_STARTTIMING_INERVAL = 10
+LOSSCUT_STARTTIMING_INERVAL = 5
 
 # ロウソク足の種類
 CANDLETYPE_POS = 0
@@ -208,11 +208,11 @@ class SimpleSignalFinder(BitSignalFinder):
             gXed and
 
             # ガラがない
-            dropped == False
+            dropped == False and
 
             # rsiに値が入っていること
-            # self.crntRsi <= 40.0 and
-            # self.crntRsi > 0.0
+            self.crntRsi <= 40.0 and
+            self.crntRsi > 0.0
         ):
             self._buySellSignalFlag = True
             return True
@@ -456,6 +456,14 @@ class SimpleSignalFinder(BitSignalFinder):
                 #     self.suddenDropTimeMin > 0 and
                 #     self.suddenDropNum >= SUDDENDROP_LOSSCUT_NUM
                 # )
+
+                or
+                # Rsiチェック。rsiが下向いて且つ買った値段より高かったら即売り
+                (
+                    self.prevBoughtRsi > 0 and
+                    self.crntRsi <= self.prevBoughtRsi and
+                    self.crntPrice > self._buyPrice
+                )
             )
         ):
             self._buyNum -= 1

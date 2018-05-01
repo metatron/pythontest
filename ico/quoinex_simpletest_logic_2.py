@@ -1,0 +1,77 @@
+from ico.quoinex_trade import QuoinexController
+from ico.simple_buysell_logic_2 import SimpleSignalFinder2
+import pandas as pd
+import numpy as np
+import time
+
+
+MAX_RETRY_COUNT = 100
+
+if __name__ == '__main__':
+    quoinex = QuoinexController()
+    # quoinex.initGraph()
+
+    simplesingal = SimpleSignalFinder2(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
+    simplesingal._minEarn = 0.5
+    simplesingal._coinAmount = 0.002
+
+    index=0
+    crntOrderId = ""
+    side = ""
+    retryCount = 0
+
+    tickFilePath = "./csv/tick_quoinex_201804251155_BTC_JPY.csv"
+    df = pd.read_csv(tickFilePath)
+    tmpList = df.values.tolist()
+    for tick in tmpList:
+        tmpTick = tick[1:]
+        tmpTick[0] = int(tmpTick[0])
+        quoinex._tickList.append(tmpTick)
+        quoinex._convertTickDataToCandle(quoinex._tickList)
+        stockstatsClass = quoinex.convertToStockStats()
+
+        simplesingal.update(quoinex._tickList, stockstatsClass)
+        buyPrice = simplesingal.buySignal()
+        sellPrice = simplesingal.sellSignal()
+        if(sellPrice == 0):
+            sellPrice = simplesingal.lossCutSell()
+        simplesingal._checkDeadXed_MacdS()
+
+        if(buyPrice > 0):
+            side = "buy"
+            crntOrderId = "buyXXXX" # quoinex.orderCoinRequest(side, buyPrice, simplesingal._coinAmount)
+            simplesingal.updateStatus(side, crntOrderId)
+            simplesingal.setWaitingForRequest(True)
+
+        if(sellPrice > 0):
+            side = "sell"
+            crntOrderId = "sellXXXX" # quoinex.orderCoinRequest(side, sellPrice, simplesingal._coinAmount)
+            simplesingal.updateStatus(side, crntOrderId)
+            simplesingal.setWaitingForRequest(True)
+
+        if(crntOrderId != ""):
+            status = "filled"
+            simplesingal.setWaitingForRequest(False)
+            if(status == "filled"):
+                if(side == "sell"):
+                    simplesingal.resetParamsForBuy()
+                crntOrderId = ""
+                side = ""
+                retryCount = 0
+            elif(status == "live"):
+                retryCount += 1
+
+            # if(retryCount >= MAX_RETRY_COUNT):
+                # quoinex.cancelOrder(crntOrderId)
+
+        # print(quoinex._tickList[-1])
+        # quoinex.makeGraph(quoinex.convertToStockStats())
+
+        # index += 1
+        # time.sleep(0.1)
+
+    print("total Earned:{}".format(simplesingal._totalEarned))
+    quoinex.initGraph()
+    quoinex.makeGraph(quoinex.convertToStockStats(), False)
+
+

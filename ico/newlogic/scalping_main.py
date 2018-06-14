@@ -35,7 +35,6 @@ if __name__ == '__main__':
             continue
 
         stockstatsClass = quoinex.convertToStockStats()
-        # print(quoinex._tickList[-1])
 
         simplesingal.update(quoinex._tickList, stockstatsClass)
 
@@ -106,12 +105,5 @@ if __name__ == '__main__':
                     side = ""
                     retryCount = 0
 
-        #
-        #
-        #
-        #
-        # quoinex.writeTickList()
-
-        # index += 1
         randWait = np.random.randint(2, 3, dtype="int")
         time.sleep(int(randWait))

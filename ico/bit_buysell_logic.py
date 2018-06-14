@@ -689,7 +689,7 @@ class BitSignalFinder():
         ):
             oldSellPrice = self._sellPrice
             self._sellPrice = crntPrice
-            print("***LosCut Lv2! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
+            print("***LosCut Lv2! {}, _buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
             # self._saveStatus()
             return [self._buyOrderId, self._sellPrice]
 
@@ -705,7 +705,7 @@ class BitSignalFinder():
         ):
             oldSellPrice = self._sellPrice
             self._sellPrice = crntPrice
-            print("***LosCut Lv3! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
+            print("***LosCut Lv3! {}, _buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
             # self._saveStatus()
             return [self._buyOrderId, self._sellPrice]
 
@@ -733,7 +733,7 @@ class BitSignalFinder():
                 self._sellPrice = lowestPrice
 
         self._isLossCut = True
-        print("***LosCut Lv1! {}, buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
+        print("***LosCut Lv1! {}, _buyPrice:{}, oldSellPrice:{}, newSellPrice:{}".format(crntDateTime, self._buyPrice, oldSellPrice, self._sellPrice))
 
         # self._saveStatus()
 
@@ -765,9 +765,9 @@ class BitSignalFinder():
 
     def _saveStatus(self):
         saveParam = {
-            'buyPrice': self._buyPrice,
+            '_buyPrice': self._buyPrice,
             'buyDateTime' : self._buyDateTime,
-            'sellPrice' : self._sellPrice,
+            '_sellPrice' : self._sellPrice,
             'coinAmount' : self._coinAmount,
             'minEarn': self._minEarn,
             'buyNum': self._buyNum,
@@ -784,9 +784,9 @@ class BitSignalFinder():
     def _loadStatus(self):
         if(os.path.exists(STATUS_FILEPATH)):
             params = json.load(open(STATUS_FILEPATH))
-            self._buyPrice = float(params['buyPrice'])
+            self._buyPrice = float(params['_buyPrice'])
             self._buyDateTime = float(params['buyDateTime'])
-            self._sellPrice = float(params['sellPrice'])
+            self._sellPrice = float(params['_sellPrice'])
             self._coinAmount = float(params['coinAmount'])
             self._minEarn = float(params['minEarn'])
             self._buyNum = float(params['buyNum'])

@@ -48,7 +48,7 @@ SUDDENDROP_LOSSCUT_NUM = 10
 NEXT_BUY_WAIT_TIME = 1
 
 #近似曲線を得る為に必要な値段のリスト（約3分間）
-NEED_COUNT_FOR_APPROXIMATION = 180
+NEED_COUNT_FOR_APPROXIMATION = 60
 
 
 def linear_fit(x, a, b):
@@ -70,7 +70,7 @@ class SimpleSignalFinder2(SimpleSignalFinder):
         if(self.getWaitingForRequest()):
             return 0
 
-        print("buySignal {} canTrade:{}, crntPrice:{}, buyPrice:{}, sellbuyflg:{}, rsi:{}, candle:{}".format(self.crntTimeSec, self.canTrade, self.crntPrice, self._buyPrice, self._buySellSignalFlag, self.crntRsi, self.getCandleType()))
+        print("buySignal {} canTrade:{}, crntPrice:{}, _buyPrice:{}, sellbuyflg:{}, rsi:{}, candle:{}".format(self.crntTimeSec, self.canTrade, self.crntPrice, self._buyPrice, self._buySellSignalFlag, self.crntRsi, self.getCandleType()))
         if (
             self.canTrade and
             self._buyPrice == 0 and
@@ -138,12 +138,12 @@ class SimpleSignalFinder2(SimpleSignalFinder):
             # self.isAboveLowBoll() and
 
             #ゴールデンクロス発生中
-            # gXed and
+            gXed and
 
             # ガラがない
             # dropped == False and
 
-            a > 1.0 and
+            a > 4.0 and
 
             # rsiに値が入っていること
             self.crntRsi <= 60.0 and
@@ -151,6 +151,7 @@ class SimpleSignalFinder2(SimpleSignalFinder):
         ):
             self._buySellSignalFlag = True
             return True
+        self._buySellSignalFlag = False
         return False
 
 
@@ -195,12 +196,8 @@ class SimpleSignalFinder2(SimpleSignalFinder):
     return: [1コイン辺りの最低売り金額, 買いの時との差, 売らなければいけないコイン個数] 
     """
     def getMinSellPrice(self, buyPrice, coinAmount=0.001, minEarn=1.0):
-        # 買ったコインを円に変換
-        actualBuyYenPrice = buyPrice * coinAmount
-        # 売り（円）を設定
-        idealSellYenPrice = actualBuyYenPrice + minEarn
         # 売りのコイン値に変換
-        idealSellPrice = idealSellYenPrice / coinAmount
+        idealSellPrice = buyPrice + minEarn
 
         diffPrice = idealSellPrice - buyPrice
 

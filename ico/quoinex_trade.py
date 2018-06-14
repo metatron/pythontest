@@ -2,7 +2,7 @@
 # coding=utf-8
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import hmac
 import requests
 import hashlib
@@ -11,7 +11,8 @@ import time
 import json
 import jwt
 import requests
-import datetime
+import math
+
 
 from ico.bitflyer_trade import BitFlyerController
 
@@ -183,6 +184,56 @@ class QuoinexController(BitFlyerController):
         return None
 
 
+    def updateOrder(self, orderId, price, quantity):
+        params = {
+            "order": {
+                "quantity": quantity,
+                "price": price,
+            }
+        }
+
+        params = json.dumps(params)
+
+        path = "/orders/{}".format(orderId)
+        resultJson = self._getRequestData(path, params=params, getOrPost='put')
+
+        if resultJson == None:
+            print("************ [updateOrder] request Error!")
+            return
+
+
+
+    def getExecutions(self, sec=30, limit=50):
+        nowTime = datetime.now()
+        prevTime = nowTime - timedelta(seconds=sec)
+        prevTimeUnix = prevTime.timestamp()
+        fromTime = int(math.floor(prevTimeUnix))
+
+        path = "/executions?product_id=5&timestamp={}&limit={}".format(fromTime, limit)
+        # path = "/executions?product_id=5&limit={}".format(limit)
+        resultJson = self._getRequestData(path)
+        # print(json.dumps(resultJson))
+
+        return resultJson
+        # return resultJson['models']
+
+
+    def getDaylyProfits(self):
+        #/orders?funding_currency=:currency&product_id=:product_id&status=:status&with_details=1
+        path = "/orders?product_id=5&status=filled"
+        resultJson = self._getRequestData(path, getOrPost='get')
+
+        totalBoughtPrice = 0
+        totalSoldPrice = 0
+        for tx in resultJson['models']:
+            if(tx['side'] == 'buy'):
+                totalBoughtPrice += float(tx['filled_quantity']) * float(tx['price'])
+            else:
+                # txTime = datetime.fromtimestamp(tx['created_at'])
+                totalSoldPrice += float(tx['filled_quantity']) * float(tx['price'])
+
+        print("totalBoughtPrice:{}, totalSoldPrice:{}, totalEarned:{}".format(totalBoughtPrice, totalSoldPrice, (totalSoldPrice - totalBoughtPrice)))
+
 
 
 
@@ -192,12 +243,18 @@ if __name__ == '__main__':
     # quoinex.getBalance()
     # orderId = quoinex.orderCoinRequest("buy", 872052.0, 0.001)
     # quoinex.checkOrder(orderId)
-    # quoinex.orderCoinRequest("sell", 924925.59, 0.001)
-    # orderId = quoinex.orderCoinRequest("sell", 873052.0, 0.001)
+    quoinex.orderCoinRequest("sell", 731237.51, 0.001)
+    # orderId = quoinex.orderCoinRequest("sell", 728510.1, 0.001)
     # quoinex.checkOrder(235693402)
 
     # quoinex.autoBuy()
     # quoinex.autoSell()
-    quoinex.cancelOrder(252567494)
+    # quoinex.cancelOrder(252567494)
+
+    # quoinex.getDaylyProfits()
+
+    # quoinex.getExecutions(limit=50)
+
+
 
 

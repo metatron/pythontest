@@ -152,7 +152,7 @@ class SimpleSignalFinder(BitSignalFinder):
         if(self.getWaitingForRequest()):
             return 0
 
-        print("buySignal {} canTrade:{}, crntPrice:{}, buyPrice:{}, sellbuyflg:{}, rsi:{}, candle:{}".format(self.crntTimeSec, self.canTrade, self.crntPrice, self._buyPrice, self._buySellSignalFlag, self.crntRsi, self.getCandleType()))
+        print("buySignal {} canTrade:{}, crntPrice:{}, _buyPrice:{}, sellbuyflg:{}, rsi:{}, candle:{}".format(self.crntTimeSec, self.canTrade, self.crntPrice, self._buyPrice, self._buySellSignalFlag, self.crntRsi, self.getCandleType()))
         if (
             self.canTrade and
             self._buyPrice == 0 and
@@ -387,7 +387,7 @@ class SimpleSignalFinder(BitSignalFinder):
                 # self.suddenDropTimeMin > 0
             )
             ):
-            print("_checkDeadXed_MacdS!! {} buyPrice:{}, macdDiff:{}".format(
+            print("_checkDeadXed_MacdS!! {} _buyPrice:{}, macdDiff:{}".format(
                 self.crntTimeSec, self._buyPrice,
                 (self.crntMacdH < self.macdHAll[-2] and self.macdHAll[-2] < self.macdHAll[-3])))
 
@@ -552,18 +552,23 @@ class SimpleSignalFinder(BitSignalFinder):
     return: [1コイン辺りの最低売り金額, 買いの時との差, 売らなければいけないコイン個数] 
     """
     def getMinSellPrice(self, buyPrice, coinAmount=0.001, minEarn=1.0):
-        # 買ったコインを円に変換
-        actualBuyYenPrice = buyPrice * coinAmount
-        # 売り（円）を設定
-        idealSellYenPrice = actualBuyYenPrice + minEarn
+        # # 買ったコインを円に変換
+        # actualBuyYenPrice = buyPrice * coinAmount
+        # # 売り（円）を設定
+        # idealSellYenPrice = actualBuyYenPrice + minEarn
+        # # 売りのコイン値に変換
+        # idealSellPrice = idealSellYenPrice / coinAmount
+        #
+        # diffPrice = idealSellPrice - buyPrice
+        #
+        # return [idealSellPrice, diffPrice, coinAmount]
+
         # 売りのコイン値に変換
-        idealSellPrice = idealSellYenPrice / coinAmount
+        idealSellPrice = buyPrice + minEarn
 
         diffPrice = idealSellPrice - buyPrice
 
         return [idealSellPrice, diffPrice, coinAmount]
-
-
 
 #TODO 負けない実装
 #self.prevBoughtRsi が効いてない

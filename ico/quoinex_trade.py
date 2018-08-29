@@ -218,22 +218,48 @@ class QuoinexController(BitFlyerController):
         # return resultJson['models']
 
 
-    def getDaylyProfits(self):
+    def getDaylyProfits(self, showlist=False, filterDate=""):
         #/orders?funding_currency=:currency&product_id=:product_id&status=:status&with_details=1
         path = "/orders?product_id=5&status=filled"
         resultJson = self._getRequestData(path, getOrPost='get')
 
+        buyTxtList = []
+        sellTxtList = []
+
         totalBoughtPrice = 0
         totalSoldPrice = 0
         for tx in resultJson['models']:
-            if(tx['side'] == 'buy'):
-                totalBoughtPrice += float(tx['filled_quantity']) * float(tx['price'])
+
+            txTime = datetime.fromtimestamp(tx['created_at'])
+            dateStr = txTime.strftime("%Y-%m-%d")
+            if filterDate != "" and filterDate != dateStr:
+                continue
+
+            if showlist == False:
+                if(tx['side'] == 'buy'):
+                    totalBoughtPrice += float(tx['filled_quantity']) * float(tx['price'])
+                else:
+                    # txTime = datetime.fromtimestamp(tx['created_at'])
+                    totalSoldPrice += float(tx['filled_quantity']) * float(tx['price'])
+
             else:
-                # txTime = datetime.fromtimestamp(tx['created_at'])
-                totalSoldPrice += float(tx['filled_quantity']) * float(tx['price'])
+                txTime = datetime.fromtimestamp(tx['created_at'])
+                if(tx['side'] == 'buy'):
+                    buyTxtList.append("createdAt:{}, quantity:{}, price:{}".format(txTime, float(tx['filled_quantity']), float(tx['price'])))
+                else:
+                    sellTxtList.append("createdAt:{}, quantity:{}, price:{}".format(txTime, float(tx['filled_quantity']), float(tx['price'])))
 
-        print("totalBoughtPrice:{}, totalSoldPrice:{}, totalEarned:{}".format(totalBoughtPrice, totalSoldPrice, (totalSoldPrice - totalBoughtPrice)))
+        if showlist == False:
+            print("totalBoughtPrice:{}, totalSoldPrice:{}, totalEarned:{}".format(totalBoughtPrice, totalSoldPrice, (totalSoldPrice - totalBoughtPrice)))
 
+        else:
+            print("BUY LIST ====================")
+            for buyTxt in buyTxtList:
+                print(buyTxt)
+
+            print("SELL LIST ====================")
+            for sellTxt in sellTxtList:
+                print(sellTxt)
 
 
 
@@ -243,15 +269,15 @@ if __name__ == '__main__':
     # quoinex.getBalance()
     # orderId = quoinex.orderCoinRequest("buy", 872052.0, 0.001)
     # quoinex.checkOrder(orderId)
-    quoinex.orderCoinRequest("sell", 731237.51, 0.001)
-    # orderId = quoinex.orderCoinRequest("sell", 728510.1, 0.001)
+    # quoinex.orderCoinRequest("sell", 731237.51, 0.001)
+    # orderId = quoinex.orderCoinRequest("sell", 880806.0, 0.003)
     # quoinex.checkOrder(235693402)
 
     # quoinex.autoBuy()
     # quoinex.autoSell()
     # quoinex.cancelOrder(252567494)
 
-    # quoinex.getDaylyProfits()
+    quoinex.getDaylyProfits(False, "2018-08-23")
 
     # quoinex.getExecutions(limit=50)
 

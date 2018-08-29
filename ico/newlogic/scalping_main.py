@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     simplesingal = ScalpingLogic(quoinex._tickList, quoinex._candleStats, [0.0, 0.0])
     # simplesingal._minEarn = 200.0
-    simplesingal._coinAmount = 0.001
+    simplesingal._coinAmount = 0.003
 
     index=0
     crntOrderId = ""
@@ -73,7 +73,7 @@ if __name__ == '__main__':
                 crntOrderId = ""
                 side = ""
                 retryCount = 0
-            elif(status == "live"):
+            elif(status == "live" and side == "buy"):
                 retryCount += 1
 
                 #途中で値段が下がった場合

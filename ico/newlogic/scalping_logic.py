@@ -55,7 +55,7 @@ NEED_COUNT_FOR_APPROXIMATION = 5
 BOUGHT_INTERVAL = 3
 
 #買う際若干高くする
-INCREMENTED_BUYPRICE = 0.5
+INCREMENTED_BUYPRICE = 0.8
 
 #status save
 STATUS_FILEPATH = './status.json'
@@ -296,8 +296,7 @@ class ScalpingLogic():
         if(
             self.sellTrigger == True and
             self.crntPrice > self._buyPrice and
-            # aVec < 0
-            buyNum < sellNum
+            (aVec < 0 or buyNum < sellNum)
         ):
             print("*****sell!")
             self.buyTrigger = False
